@@ -1,0 +1,10 @@
+{
+  "extraKnownMarketplaces": {
+    "mn-passport-sdk": {
+      "source": "./"
+    }
+  },
+  "enabledPlugins": {
+    "mn-skills@mn-passport-sdk": true
+  }
+}

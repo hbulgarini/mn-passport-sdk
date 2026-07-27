@@ -1,6 +1,6 @@
 # Development workflow — the `mn-skills` family
 
-> **Status:** draft · 2026/07/24
+> **Status:** draft · 2026/07/27
 > **Companion to:** [`sdk-requirements.md`](./sdk-requirements.md) (the *what/why*)
 > and [`architecture.md`](./architecture.md) (the *how*). This document is the
 > *how we build it* — the Claude-harness skills that drive SDK development and
@@ -34,8 +34,8 @@ stop matching the code.
 Two principles fall out and shape everything below:
 
 - **Skills assist and judge; hooks/CI enforce.** Anything that must be
-  *guaranteed* — a PR always has a description, the security register never
-  gets pushed, dependencies respect the cooldown — lives in the deterministic
+  *guaranteed* — a PR always has a description, security findings never land
+  in this repo, dependencies respect the cooldown — lives in the deterministic
   layer (hooks/CI), because the harness runs it, not the model. Skills draft,
   review, and advise; they never *guarantee*. Mixing the two produces a skill
   that "usually" adds a description.
@@ -57,7 +57,14 @@ existing tooling it leans on (we wire, we do not reinvent).
 **`mn-skills-spec-driver`** — plan, then loop.
 - *Plan phase* (harness plan mode): a per-feature spec → an ordered set of
   **tranches, each sized to one small/medium PR**, each with an acceptance
-  gate. PR boundaries are decided here, up front — not bolted on later. The
+  gate. **Every tranche carries a size estimate** (files touched, rough net
+  lines), against the **tranche budget**: target **≤ ~400 net changed lines**,
+  hard split above **600** (both excluding lockfiles, generated code, and
+  test fixtures — cheap-to-review mechanical lines don't count). A plan with
+  a tranche estimated over budget is **invalid** — it gets re-split at plan
+  time, when splitting is cheap, not after the code exists. The estimate is
+  what lets the human reviewer catch an oversized tranche during plan review.
+  PR boundaries are decided here, up front — not bolted on later. The
   plan phase also **requires the spec's GitHub issue** (from
   `midnightntwrk/passport/issues`); if the spec names none, it **stops and
   asks for it** before planning — no untraceable work.
@@ -81,8 +88,12 @@ aligns; enforced at review time so the code does.
    witness not zeroised, missing ceremony gate) → fix now.
 2. *Residual-risk register* — "insecure but not resolvable right now" items,
    each with **risk → why it can't be fixed yet → mitigations**, appended to
-   a **gitignored** register (§4). This is the demo's hand-written
-   `DECISIONS.md` "Known gaps" list, automated and maintained per PR.
+   the **security register in the private sibling repo
+   `../mn-passport-sdk-debts`** (checked out at the same level as this repo),
+   then committed and pushed there (§4). Security findings live in a private
+   repo, not this one — they must never land in the SDK's public history.
+   This is the demo's hand-written `DECISIONS.md` "Known gaps" list,
+   automated and maintained per PR.
 
 **`mn-skills-code-style`** — project coding preferences. Grounded in
 `.claude/rules/` (British English + Oxford comma, `YYYY/MM/DD` dates, Rust
@@ -112,8 +123,9 @@ provisional decisions and open validations that still need re-checking.
 
 ### Ship
 
-**`mn-skills-pr-open`** — small/medium sizing check (flags a split if the
-diff is too large) and the **PR description** ("what's being built" + link to
+**`mn-skills-pr-open`** — sizing check against the **same tranche budget as
+the plan phase** (soft flag past ~400 net changed lines, split required past
+600 — estimates drift, so this is the backstop) and the **PR description** ("what's being built" + link to
 the spec tranche **and the spec's GitHub issue** — `Refs #NN`, or `Closes #NN`
 on the tranche that finishes it). **Prepares** the branch, commits, and
 description, then **stops for explicit human confirmation before
@@ -141,8 +153,11 @@ Leans on `release-notes` and `troubleshooting`.
 
 **`mn-skills-devenv`** — guards the dev environment. Passkeys require an
 **HTTPS / secure context even locally** (a `localhost` HTTP redirect will not
-do), alongside devnet + proof server + compact CLI. Leans on
-`midnight-tooling:*` (devnet, proof-server, doctor).
+do), alongside devnet + proof server + compact CLI. Also confirms the
+**private debts repo is present and pushable** — `../mn-passport-sdk-debts`
+checked out beside this repo, with a working remote — since `security-audit`
+cannot record findings without it. Leans on `midnight-tooling:*` (devnet,
+proof-server, doctor).
 
 ### Deferred (named, not built yet)
 
@@ -179,8 +194,9 @@ docs are the source; a feature spec is what gets driven).
    b. Implement the tranche.
    c. Run the lenses in parallel: `conformance`, `security-audit`,
       `code-style`, `verify`. Blocking findings are fixed before proceeding.
-   d. Registers update: security-audit → security register; verify/doc-sync →
-      verify register (both gitignored).
+   d. Registers update: security-audit → security register (committed and
+      pushed to the private `../mn-passport-sdk-debts` repo); verify/doc-sync
+      → verify register (gitignored, local).
    e. If conformance finds the code diverging from the docs for a *good*
       reason, `mn-skills-doc-sync` updates `sdk/docs` + records an ADR — the
       docs are corrected, not the code bent to a stale doc.
@@ -224,7 +240,7 @@ flowchart TB
   HUMAN -->|done| DONE
   HUMAN -. updates .-> STATE["sdk/STATE.md: done / backlog (committed)"]
 
-  SEC -. appends .-> SREG[".mn-skills/security-register.md (gitignored)"]
+  SEC -. "appends + pushes" .-> SREG["../mn-passport-sdk-debts: security register (private repo)"]
   VERIFY -. open items .-> VREG[".mn-skills/verify-register.md (gitignored)"]
   CONF -. divergence .-> SYNC["doc-sync: update docs + ADR"]
   SYNC -. corrects .-> DOCS
@@ -268,8 +284,8 @@ flowchart LR
 ### `STATE.md` — progress and backlog
 
 `sdk/STATE.md` is the human-readable, **committed** record of SDK development
-— distinct from the gitignored registers (§4), because progress is meant to
-be shared, not hidden. `mn-skills-spec-driver` maintains it as tranches land
+— distinct from the registers (§4), which are kept out of this repo because
+findings and open risks are not meant to ship with the code. `mn-skills-spec-driver` maintains it as tranches land
 or slip, in three parts:
 
 - **Done** — completed tranches / PRs, each with its issue and PR links.
@@ -302,11 +318,15 @@ Deterministic guarantees, run by the harness/CI rather than judged by a skill:
 
 - **PR description present**, referencing its spec tranche **and its GitHub
   issue** (`Refs`/`Closes #NN`).
-- **Diff-size guardrail** — a soft warning past a threshold (advisory, so it
-  does not fight a legitimately larger change), pointing back to
+- **Diff-size guardrail** — the same numbers as the tranche budget: **soft
+  warning past 400 net changed lines, hard failure past 600** (excluding
+  lockfiles, generated code, and test fixtures), pointing back to
   `mn-skills-pr-open`'s split suggestion.
-- **Registers gitignored** — `.mn-skills/` is git-ignored; the security and
-  verify registers live there and never push.
+- **Security register never in this repo** — security findings live in the
+  private sibling repo `../mn-passport-sdk-debts`; `.mn-skills/` stays
+  git-ignored as a backstop so no register file can be committed here.
+- **Verify register gitignored** — `.mn-skills/` is git-ignored; the verify
+  register lives there and never pushes.
 - **`STATE.md` committed** — `sdk/STATE.md` is *not* under `.mn-skills/`;
   progress and backlog are shared project state, tracked in the repo.
 - **Format + lint** pass.
@@ -326,20 +346,29 @@ Stated so the doc is decisive; each is revisitable.
 - **Prefix** `mn-skills-` for every development skill.
 - **Specs are per-feature**, derived from `sdk/docs`; the big docs are the
   source of truth.
-- **Two gitignored registers** under `.mn-skills/`: the *security register*
-  (owned by `security-audit`) and the *verify register* of provisional /
-  open-validation items (owned by `doc-sync`, fed by `verify`). Persistent
-  and appended — accepted risks and open validations accumulate and are
-  re-checked, not regenerated.
+- **Tranche budget: 400 soft / 600 hard** net changed lines (excluding
+  lockfiles, generated code, and test fixtures). Applied three times with
+  the same numbers: plan-phase estimates (a plan with an over-budget tranche
+  is invalid), `pr-open`'s backstop check, and the CI guardrail.
+- **Two registers, two homes.** The *security register* (owned by
+  `security-audit`) lives in the **private sibling repo
+  `../mn-passport-sdk-debts`** and is committed + pushed there per PR. The
+  *verify register* of provisional / open-validation items (owned by
+  `doc-sync`, fed by `verify`) stays gitignored under `.mn-skills/`.
+  Both persistent and appended — accepted risks and open validations
+  accumulate and are re-checked, not regenerated.
 - **The loop stops before outward actions** — it prepares PRs; it does not
-  push or open them without explicit human go.
+  push or open them without explicit human go. **One recorded exception:**
+  pushing the security register to the private `../mn-passport-sdk-debts`
+  repo, which exists precisely to receive those findings.
 - **Enforcement in hooks/CI, judgment in skills.**
 - **Packaged as one `mn-skills` plugin** — the skills and their backing
   hooks travel together.
 - **Every spec names a GitHub issue**; planning refuses to start without one.
   Traceability runs issue → spec → tranches → PRs → `STATE.md`.
 - **`STATE.md` (committed)** tracks done / in-progress / backlog; the two
-  registers (gitignored) track residual risks and open validations.
+  registers — security (private debts repo) and verify (gitignored) — track
+  residual risks and open validations.
 
 ---
 
@@ -348,6 +377,5 @@ Stated so the doc is decisive; each is revisitable.
 - Whether `mn-skills-verify` is a distinct skill or simply "the loop always
   runs `/verify` before `pr-open`". Drafted here as distinct (it wraps
   existing tooling and owns register entries), revisitable.
-- The exact diff-size threshold for the advisory guardrail.
 - Whether per-feature spec authoring warrants its own skill or stays inside
   `spec-driver`'s plan phase.

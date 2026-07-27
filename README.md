@@ -38,4 +38,16 @@ Published under the `@midnight-ntwrk/` scope:
 Development is spec-driven and harness-assisted — see
 [`docs/development-workflow.md`](./docs/development-workflow.md). Every spec is
 planned into small, reviewable PRs anchored to a GitHub issue; progress and
-backlog will be tracked in `STATE.md` once development starts.
+backlog are tracked in [`STATE.md`](./STATE.md).
+
+The workflow ships as the **`mn-skills` plugin** in [`mn-skills/`](./mn-skills):
+nine skills (`/mn-skills:spec-driver`, the four review lenses, `doc-sync`,
+`pr-open`, and the `deps` / `devenv` watchers), a PreToolUse hook that stops
+outward actions for human confirmation, and the scripts behind the CI gate
+([`.github/workflows/pr-checks.yml`](./.github/workflows/pr-checks.yml)).
+Claude Code auto-enables it when you trust the repo (via
+`.claude/settings.json`); manual fallback:
+`/plugin marketplace add .` then `/plugin install mn-skills@mn-passport-sdk`.
+
+Prerequisite: the private residual-risk register repo cloned as a sibling at
+`../mn-passport-sdk-debts` (checked by `/mn-skills:devenv`).

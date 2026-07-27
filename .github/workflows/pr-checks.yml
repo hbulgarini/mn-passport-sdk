@@ -1,0 +1,69 @@
+# Enforcement layer — deterministic guarantees per docs/development-workflow.md §4.
+# Skills judge; this gate guarantees.
+name: PR checks
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  description:
+    name: PR references its issue
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Refs/Closes #NN in the PR description
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if ! printf '%s' "$BODY" | grep -qiE '(refs|closes|fixes|resolves)[[:space:]]+([a-z0-9./-]+)?#[0-9]+'; then
+            echo "::error::PR description must reference its spec issue — 'Refs midnightntwrk/passport#NN' (or 'Closes #NN' on the finishing tranche)."
+            exit 1
+          fi
+          echo "Issue reference found."
+
+  diff-size:
+    name: Tranche budget (400 soft / 600 hard)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check net changed lines against the budget
+        run: bash mn-skills/scripts/check-diff-size.sh "origin/${{ github.base_ref }}" --ci
+
+  dep-cooldown:
+    name: 7-day dependency cooldown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reject package versions younger than 7 days
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node mn-skills/scripts/check-dep-cooldown.mjs "origin/${{ github.base_ref }}"
+
+  format-lint:
+    name: Format + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Lint and format check (skips until package.json lands)
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+            npm run lint --if-present
+            npm run format:check --if-present
+          else
+            echo "No package.json yet — skipping."
+          fi
