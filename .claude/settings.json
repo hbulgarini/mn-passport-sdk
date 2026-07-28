@@ -1,7 +1,10 @@
 {
   "extraKnownMarketplaces": {
     "mn-passport-sdk": {
-      "source": "./"
+      "source": {
+        "source": "directory",
+        "path": "./"
+      }
     }
   },
   "enabledPlugins": {
