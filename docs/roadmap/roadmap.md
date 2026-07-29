@@ -95,7 +95,7 @@ register and docs are current.
 | `adapter-signer-local` | self-custody signer — contingency fallback (ADR 0001) | M1 |
 | `adapter-prover-remote` | BCW TEE proving (seal + `/prove`) | M1 |
 | `adapter-*` settlement seam | BCW DUST balancing + submit | M1 |
-| `adapter-browser` | platform target (the PWA) | M0–M1 |
+| `adapter-browser` | platform target (the PWA) | M1 |
 
 **Not built for beta:** `adapter-prover-wasm`, `adapter-agent-ows`,
 `adapter-wallet-connect`, `adapter-fee-capacity-exchange`, and the
