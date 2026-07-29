@@ -34,7 +34,7 @@
   `STATE.md` + gitignore.
 - **Open questions.** Workspace tool (confirm yarn vs pnpm against the README);
   the advisory diff-size threshold.
-- **Issue.** `#TBD`
+- **Issue.** [midnightntwrk/passport#50](https://github.com/midnightntwrk/passport/issues/50)
 
 ## FS-0.2 — ACC contract binding over the external artefact
 
