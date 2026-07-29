@@ -1,32 +1,37 @@
-// Guards the FS-0.2 §4.1 multi-version binding registry data (D-8; ADR
-// 0004): the committed registry must be well-formed, the TypeScript mirror
-// must agree with the canonical JSON, and every locally built artefact
-// version must match its committed hashes byte-for-byte. The resolution
-// surface (resolveBinding, detectDeployedVersion) is T1.5b's; loader-level
-// verification and ZkArtifactIntegrityError are T3's.
+// Guards the FS-0.2 §4.1 multi-version binding registry (D-8; ADR 0004):
+// the committed registry must be well-formed, resolution and chain-derived
+// version detection must behave, and every locally built artefact version
+// must match its committed hashes byte-for-byte. Loader-level verification
+// and ZkArtifactIntegrityError are T3's.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 
-const { ACC_REGISTRY } = await import(
-  new URL('../packages/contract/dist/index.js', import.meta.url).href
-);
 const registryJsonUrl = new URL(
   '../packages/contract/acc-versions.generated.json',
   import.meta.url,
 );
-const SUPPORTED = Object.keys(ACC_REGISTRY.versions);
+
+const {
+  ACC_REGISTRY,
+  BINDING_VERSION,
+  SUPPORTED_BINDINGS,
+  UnsupportedBindingError,
+  detectDeployedVersion,
+  resolveBinding,
+} = await import(new URL('../packages/contract/dist/index.js', import.meta.url).href);
 
 test('the registry is well-formed and current is a supported version', () => {
-  assert.ok(SUPPORTED.length >= 1, 'the registry must hold at least one version');
-  assert.ok(SUPPORTED.includes(ACC_REGISTRY.current), 'current must be a supported version');
+  assert.ok(SUPPORTED_BINDINGS.length >= 1, 'the registry must hold at least one version');
+  assert.ok(SUPPORTED_BINDINGS.includes(BINDING_VERSION), 'current must be a supported version');
   assert.equal(
-    ACC_REGISTRY.versions[ACC_REGISTRY.current].provisional,
+    resolveBinding(BINDING_VERSION).provisional,
     true,
     'the prototype-era current pin must declare itself provisional',
   );
-  for (const [version, binding] of Object.entries(ACC_REGISTRY.versions)) {
+  for (const version of SUPPORTED_BINDINGS) {
+    const binding = resolveBinding(version);
     assert.equal(typeof binding.provisional, 'boolean', `${version} must record its pin status`);
     assert.ok(
       binding.source.path.endsWith('account.compact'),
@@ -39,21 +44,9 @@ test('the registry is well-formed and current is a supported version', () => {
   }
 });
 
-test('the TypeScript mirror must agree with the canonical registry JSON', () => {
-  const { $generatedBy, schemaVersion, ...json } = JSON.parse(
-    readFileSync(registryJsonUrl, 'utf8'),
-  );
-  assert.equal($generatedBy, 'scripts/build-acc-artefact.mjs', 'the JSON must carry provenance');
-  assert.equal(schemaVersion, 1, 'the JSON must carry its schema version');
-  assert.deepEqual(
-    json,
-    structuredClone(ACC_REGISTRY),
-    'manifest.generated.ts must mirror acc-versions.generated.json exactly',
-  );
-});
-
 test('every version pins its full circuit inventory under its own keyLocations', () => {
-  for (const [version, binding] of Object.entries(ACC_REGISTRY.versions)) {
+  for (const version of SUPPORTED_BINDINGS) {
+    const binding = resolveBinding(version);
     const pins = Object.entries(binding.circuits);
     const provable = pins.filter(([, pin]) => pin.proof);
     assert.equal(pins.length, 15, `${version} must pin 15 circuits (12 provable + 3 pure)`);
@@ -80,9 +73,29 @@ test('every version pins its full circuit inventory under its own keyLocations',
   }
 });
 
+test('resolveBinding must reject versions outside the supported set', () => {
+  assert.throws(
+    () => resolveBinding('9.9.9-nonexistent'),
+    UnsupportedBindingError,
+    'an unknown version must throw UnsupportedBindingError',
+  );
+  assert.equal(resolveBinding(BINDING_VERSION), ACC_REGISTRY.versions[BINDING_VERSION]);
+});
+
+test('detectDeployedVersion must recover a version from its verifier-key hashes', () => {
+  const binding = resolveBinding(BINDING_VERSION);
+  const verifierHashes = Object.values(binding.circuits)
+    .filter((pin) => pin.hashes)
+    .map((pin) => pin.hashes.verifierKey);
+  assert.equal(detectDeployedVersion(verifierHashes), BINDING_VERSION);
+  assert.equal(detectDeployedVersion([]), null, 'no evidence must detect nothing');
+  const tampered = ['0'.repeat(64), ...verifierHashes.slice(1)];
+  assert.equal(detectDeployedVersion(tampered), null, 'a foreign key set must detect nothing');
+});
+
 test('the commitment pure circuits the deploy caller needs must be present', () => {
   for (const name of ['derive_device_commitment', 'derive_recovery_commitment']) {
-    const pin = ACC_REGISTRY.versions[ACC_REGISTRY.current].circuits[name];
+    const pin = resolveBinding(BINDING_VERSION).circuits[name];
     assert.ok(pin, `${name} must be in the current binding`);
     assert.equal(pin.pure, true, `${name} must be pure`);
   }
@@ -90,10 +103,11 @@ test('the commitment pure circuits the deploy caller needs must be present', () 
 
 test('every locally built artefact version must match its committed hashes', (t) => {
   let verified = 0;
-  for (const [version, binding] of Object.entries(ACC_REGISTRY.versions)) {
+  for (const version of SUPPORTED_BINDINGS) {
     const dir = new URL(`../packages/contract/artefact/${version}/`, import.meta.url);
     if (!existsSync(dir)) continue;
     verified += 1;
+    const binding = resolveBinding(version);
     const check = (/** @type {string} */ rel, /** @type {string} */ expected) => {
       const actual = createHash('sha256')
         .update(readFileSync(new URL(rel, dir)))
@@ -114,4 +128,65 @@ test('every locally built artefact version must match its committed hashes', (t)
       'no artefact built locally — run `pnpm run build:artefact` (needs compact + ../passport)',
     );
   }
+});
+
+test('the TypeScript mirror must agree with the canonical registry JSON', async () => {
+  const { $generatedBy, schemaVersion, ...json } = JSON.parse(
+    readFileSync(registryJsonUrl, 'utf8'),
+  );
+  assert.equal($generatedBy, 'scripts/build-acc-artefact.mjs', 'the JSON must carry provenance');
+  assert.equal(schemaVersion, 1, 'the JSON must carry its schema version');
+  assert.deepEqual(
+    json,
+    structuredClone(ACC_REGISTRY),
+    'manifest.generated.ts must mirror acc-versions.generated.json exactly',
+  );
+});
+
+test('resolveBinding must reject prototype keys, and the registry must be frozen', () => {
+  for (const key of ['__proto__', 'constructor', 'toString', 'hasOwnProperty']) {
+    assert.throws(
+      () => resolveBinding(key),
+      UnsupportedBindingError,
+      `"${key}" must be rejected, not resolved from the prototype chain`,
+    );
+  }
+  assert.ok(Object.isFrozen(ACC_REGISTRY), 'the registry must be frozen at runtime');
+  assert.ok(
+    Object.isFrozen(resolveBinding(BINDING_VERSION).circuits),
+    'resolved entries must be deep-frozen — they are the integrity anchor',
+  );
+});
+
+test('detectDeployedVersion must normalise input and reject subsets and supersets', () => {
+  const binding = resolveBinding(BINDING_VERSION);
+  const hashes = Object.values(binding.circuits)
+    .filter((pin) => pin.hashes)
+    .map((pin) => pin.hashes.verifierKey);
+  const shouty = hashes.map((h) => `0x${h.toUpperCase()}`);
+  assert.equal(detectDeployedVersion(shouty), BINDING_VERSION, 'hex case and 0x must not matter');
+  assert.equal(detectDeployedVersion(hashes.slice(1)), null, 'a subset must detect nothing');
+  assert.equal(
+    detectDeployedVersion([...hashes, 'f'.repeat(64)]),
+    null,
+    'a superset must detect nothing',
+  );
+});
+
+test('detection ties must prefer current, then the first supported version', () => {
+  const vk = (/** @type {string} */ n) => ({
+    proof: true,
+    pure: false,
+    hashes: { verifierKey: n.repeat(64) },
+  });
+  const twin = { circuits: { a: vk('a'), b: vk('b') } };
+  const registry = { current: 'v2', versions: { v1: twin, v2: twin, v3: twin } };
+  const observed = ['a'.repeat(64), 'b'.repeat(64)];
+  assert.equal(detectDeployedVersion(observed, registry), 'v2', 'ties must prefer current');
+  const elsewhere = { current: 'v9', versions: { v1: twin, v2: twin } };
+  assert.equal(
+    detectDeployedVersion(observed, elsewhere),
+    'v1',
+    'without a current match, the first supported version must win',
+  );
 });
