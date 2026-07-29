@@ -62,3 +62,14 @@ Present the branch name, the commit list, and the description to the human,
 and stop. After they push and open the PR, the hooks/CI gate runs and they
 review and merge; `mn-passport-skills:spec-driver` then updates `STATE.md` and moves
 to the next tranche.
+
+## PR link convention
+
+Always hand the human a **pre-filled compare URL**: URL-encode the PR title
+and full description into the `title` and `body` query parameters
+(`https://github.com/<owner>/<repo>/compare/<base>...<branch>?expand=1&title=…&body=…`)
+so the form arrives ready to submit — the human still performs the outward
+action. Include the description as a plain copy-paste block as well (very
+long bodies can exceed URL limits, and the block survives link mangling).
+The body must contain the `Refs`/`Closes` issue reference the CI
+description gate checks.
