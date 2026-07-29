@@ -49,7 +49,8 @@ version pin** the milestone names (roadmap §2 M0).
   our own drift check), so the committed manifest carries **per-file
   content hashes** of every consumed byte — re-derivable by anyone via
   recompile. A stale, swapped, or tampered artefact **fails loudly**
-  (`ZkArtifactIntegrityError`, T3), and `--check` recompiles and compares.
+  (`ZkArtifactIntegrityError`, T3); `--check` hash-verifies any version and
+  recompile-compares the current one.
   The hashes stay SDK-derived and `[PROVISIONAL]` until the contract team
   publishes official ones ([passport#116](https://github.com/midnightntwrk/passport/issues/116)).
 
@@ -77,7 +78,7 @@ version pin** the milestone names (roadmap §2 M0).
 | D-1 | The ACC artefact is **externally owned and versioned**; this package holds only typed bindings over the published build (compiled module, ZK assets, generated types). | Decouples SDK releases from contract recompilation and insulates the SDK from toolchain instability, which the contract team manages. | architecture §8 decision 2, §4.4 |
 | D-2 | The artefact bundle carries **`keyLocation` strings, not prover keys** — the device resolves ZKIR/verifier key to build preimages; the enclave fetches and caches the 10–80 MB prover key itself. | Uploading prover keys per proof is the main mobile cost, and the keys are public. | provider-integration §5.1, §6 |
 | D-3 | **One exact pinned artefact version**, exported as `BINDING_VERSION`, guarded at connect time against the deployed ACC (an SDK version resolves against a supported ACC version range). | The binding axis must never be conflated with the wire axis; the guard is the compatibility contract. | architecture §4.6, §8 decision 2 |
-| D-4 | **Integrity by committed content hash** (ADR 0004): the manifest commits per-file hashes of every consumed artefact byte, alongside the source hash, toolchain, and circuit table. Any mismatch surfaces `ZkArtifactIntegrityError` before proving is attempted; `--check` recompiles and must reproduce the committed pin exactly. | Compilation is deterministic, so committed hashes are independently re-derivable — the strongest available pin until official published hashes replace ours ([passport#116](https://github.com/midnightntwrk/passport/issues/116)). | ADR 0004; provider-integration §5.1; brief |
+| D-4 | **Integrity by committed content hash** (ADR 0004): the manifest commits per-file hashes of every consumed artefact byte, alongside the source hash, toolchain, and circuit table. Any mismatch surfaces `ZkArtifactIntegrityError` before proving is attempted; `--check` hash-verifies any version's artefact, and for `current` additionally recompiles (to a scratch directory) and must reproduce the committed entry exactly. | Compilation is deterministic, so committed hashes are independently re-derivable — the strongest available pin until official published hashes replace ours ([passport#116](https://github.com/midnightntwrk/passport/issues/116)). | ADR 0004; provider-integration §5.1; brief |
 | D-5 | Typed callers cover **deploy only** — the claim-name caller is deferred until the C2 artefact exists (human decision 2026/07/29, OQ-4). Deploy is the Compact **constructor**, so the caller shapes constructor arguments rather than a circuit call. | Beta's onboarding slice; a stand-in binding would freestyle an interface the docs have not set. | beta-scope §2 item 1, §3; brief; OQ-4 |
 | D-6 | Development starts against the **prototype ACC** (`experiments/account-custody-prototype`), swapped for the contract team's published artefact when the gate opens — same binding surface, different pin. | The gate blocks integration, not the SDK-side build. | brief; roadmap §4; provider-integration §10 |
 | D-7 | Package dependencies: no workspace package (FS-0.1 D-2); `midnight-js` is the one permitted external runtime dependency. | `contract` is a foundation package both `core` and `connect` may link; it must stay kernel-free. | architecture §4.4, §4.6 (container view) |
@@ -102,12 +103,12 @@ export interface AccArtefact {
     keyLocation: string;    // extension-free base; resolvers add layout + suffix (§5.1, §6)
   }>;
 }
-export type CircuitName = keyof typeof ACC_MANIFEST.circuits;   // the artefact inventory
+export type CircuitName = keyof AccBinding['circuits'];   // the artefact inventory
 
 export function loadArtefact(source: ArtefactSource): Promise<AccArtefact>;
 // throws ZkArtifactIntegrityError on any hash/version mismatch (D-4)
 
-export class ZkArtifactIntegrityError extends Error { /* circuit, expected, actual */ }
+export class ZkArtifactIntegrityError extends Error { /* circuit, expected, actual; carries a stable `code` like UnsupportedBindingError; US "Artifact" retained deliberately — the name comes from provider-integration §5.1 */ }
 
 // ── typed circuit callers (deploy + name claim) ──
 export function buildDeployArgs(args: {
@@ -121,6 +122,81 @@ export function buildDeployArgs(args: {
 export function assertBindingCompatible(deployedAccVersion: string): void;
 // throws when the deployed ACC is outside the supported range
 ```
+
+### 4.1 Multi-version binding and the account's version (T1.5, D-8)
+
+> Added 2026/07/29 after the T1 review decisions. The upgrade path itself is
+> **deferred** (roadmap §8); this section covers serving multiple versions
+> side by side and tracking which one an account uses.
+
+**The registry** (committed, generated — the canonical multi-version pin):
+
+```jsonc
+// packages/contract/acc-versions.generated.json
+{
+  "current": "0.0.0-prototype.1",          // what new deploys use
+  "versions": {
+    "0.0.0-prototype.1": {
+      "provisional": true,
+      "source": { "path": "…/account.compact", "sha256": "…" },
+      "toolchain": { "cliVersion": "…", "compilerVersion": "…", "…": "…" },
+      "moduleHashes": { "contract/index.js": "…", "…": "…" },
+      "circuits": { "add_device": { "keyLocation": "acc/0.0.0-prototype.1/add_device", "hashes": { "…": "…" } }, "…": {} }
+    }
+    // adding a version appends an entry; retiring one is a reviewed
+    // deletion that must consider live accounts (D-8)
+  }
+}
+```
+
+**The derived surface** — data in `manifest.generated.ts` (the TypeScript
+mirror of the JSON, regenerated together), resolution logic hand-written in
+`src/registry.ts`. T1's manifest exports (`ACC_MANIFEST`, `AccManifest`)
+are **replaced** by the registry surface below — a reviewed rename while
+the package has no external consumers:
+
+```ts
+export const BINDING_VERSION: string;                 // = registry.current
+export const SUPPORTED_BINDINGS: readonly string[];   // every registry key
+export function resolveBinding(version: string): AccBinding;
+// → the full per-version entry (toolchain, hashes, keyLocations);
+//   throws UnsupportedBindingError for anything outside the registry
+export function assertBindingCompatible(version: string): void;  // T2 —
+//   membership of SUPPORTED_BINDINGS; the §8-decision-2 "supported range"
+export function detectDeployedVersion(
+  onChainVerifierKeyHashes: readonly string[],
+): string | null;
+// → matches a deployed contract's verifier keys against every registry
+//   entry — the chain-derived answer to "which version is this account?"
+//   while the ACC has no on-chain version marker (OQ-7). Validated against
+//   a real deploy in M1.
+```
+
+**Artefact layout**: one directory per version —
+`packages/contract/artefact/<version>/…` (gitignored) — so several versions
+coexist locally. `build:artefact --pin <version>` compiles into its
+directory and appends the registry entry **without moving `current`**
+(add `--current` to repoint new deploys — a separate, deliberate act);
+re-pinning a version whose source changed is refused unless `--force` is
+passed, because live accounts may be deployed at it. `--check [version]`
+hash-verifies any supported entry, and recompile-compares the current one
+(the ADR 0004 determinism check). The real JSON file is strict JSON with
+`$generatedBy`/`schemaVersion` provenance keys — the comments in the sketch
+above are annotation only.
+
+**Where the account's version lives — the responsibility split:**
+
+| Concern | Owner | Where it physically lives |
+|---|---|---|
+| Which versions exist, their artefacts, their hashes, and their `keyLocation`s | **`contract`** (this spec) — stateless data and pure resolution logic; the package never stores anything | the committed registry |
+| Which version **a given account** uses | **`core`** — the kernel's account session/profile owns account metadata (architecture §4.1), persisted through the **Storage seam** (FS-0.7) | on a device: IndexedDB via `adapter-browser` (architecture §4.5), like all account state |
+| Recovering that answer if local storage is evicted | **`contract`** provides `detectDeployedVersion`; **`core`** invokes it against chain state | re-derived from the deployed contract's on-chain verifier keys |
+
+The account's binding version is **cache/metadata-tier state**
+(architecture §4.5 step 1): non-secret, and rebuildable from chain via
+verifier-key matching — so eviction is not loss, and no backup obligation
+attaches to it. M1's deploy flow (FS-1.2) records it at deploy time as the
+fast path; detection is the recovery path and the integrity cross-check.
 
 ## 5. Flow
 
@@ -174,6 +250,12 @@ From the brief, made observable:
    supported range.
 5. The dependency-boundary rules still hold (`contract` gains no workspace
    dependency), and the tranche PRs pass the CI gate.
+6. **(T1.5)** The registry round-trips: two versions can be pinned side by
+   side locally (`--pin`), `resolveBinding` returns the right entry for
+   each and throws `UnsupportedBindingError` for an unknown one,
+   `SUPPORTED_BINDINGS` lists both, and `detectDeployedVersion` matches a
+   registry entry from its own verifier-key hashes (unit-level; the
+   on-chain read is M1's).
 
 ## 8. Verify plan
 
@@ -199,7 +281,7 @@ plan (estimates exclude generated code and fixtures):
 | # | Tranche (brief) | Contents | Estimate |
 |---|---|---|---|
 | T1 | **Artefact ingestion + ZK-config wiring + version pin** | `AccArtefact`, `loadArtefact`, `BINDING_VERSION`, the prototype-artefact fixture wiring | ~8 files, ≤ 300 net lines |
-| T1.5 | **Multi-version binding registry** (D-8; split out of T1 — the hard budget) | `acc-versions.generated.json`, per-version artefact layout (`artefact/<version>/`), script rework (`--pin <version>`, `--check [version]`), manifest derived from the registry, `resolveBinding(version)`, test updates. Per-account association lands where accounts exist: M1's deploy flow records the account's binding version; the upgrade path is roadmap §8. | ~6 files, ≤ 220 net lines |
+| T1.5 | **Multi-version binding registry** (D-8; split out of T1 — the hard budget) | `acc-versions.generated.json`, per-version artefact layout (`artefact/<version>/`), script rework (`--pin`/`--current`/`--force`, `--check [version]`), the derived data mirror, and the resolution surface: `SUPPORTED_BINDINGS`, `resolveBinding`, `UnsupportedBindingError` (with a stable `code`), and `detectDeployedVersion`; the platform-neutrality lint extended to every bundle-bound package; test updates. Per-account association lands where accounts exist: M1's deploy flow records the account's binding version; the upgrade path is roadmap §8. | ~6 files, ≤ 220 net lines |
 | T2 | **Typed deploy caller** (claim-name deferred, OQ-4) | `buildDeployArgs`, pure-commitment re-exports, generated-type mapping, `assertBindingCompatible` over the supported set (D-8), wiring-smoke extension | ~6 files, ≤ 250 net lines |
 | T3 | **Drift / integrity check** | `loadArtefact` verifying the committed hashes (ADR 0004), `ZkArtifactIntegrityError`, `assertBindingCompatible`, mismatch tests | ~5 files, ≤ 200 net lines |
 

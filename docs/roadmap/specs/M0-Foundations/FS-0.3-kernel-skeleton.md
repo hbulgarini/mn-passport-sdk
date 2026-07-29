@@ -93,7 +93,10 @@ mocks from FS-0.4–FS-0.8.
 
 **Internal:** FS-0.1 (workspace, `core` skeleton); the **interface tranche**
 of each seam spec FS-0.4–FS-0.8 (the kernel composes them). FS-0.2 is not
-required (circuit coupling arrives with FS-1.1). Downstream: FS-1.2
+required to build (circuit coupling arrives with FS-1.1), but the account
+metadata the kernel owns uses FS-0.2's version identifiers — the account's
+binding version, recorded at deploy and re-derivable via
+`detectDeployedVersion` (FS-0.2 §4.1). Downstream: FS-1.2
 orchestrates onboarding through `Passport.create`.
 
 **External gate:** none. Fully buildable against the seam mocks.
