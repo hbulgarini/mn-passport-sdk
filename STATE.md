@@ -33,36 +33,50 @@
   `gitignore-backstop` job, Node driven from `.nvmrc`, actions pinned by
   commit SHA. **FS-0.1 complete: issue #50 tranches 1–3 merged.**
 
+- **FS-0.2 · T1 — artefact ingestion + committed binding pin** (#50 ·
+  [PR #5](https://github.com/hbulgarini/mn-passport-sdk/pull/5), merged
+  2026/07/29) — `build:artefact` compiles the prototype ACC into the
+  gitignored artefact directory; the committed manifest pins the binding
+  with per-file content hashes (ADR 0004 — compilation is deterministic;
+  ADR 0003's contrary finding was a false positive, corrected);
+  [passport#116](https://github.com/midnightntwrk/passport/issues/116)
+  rewritten as the versioning-ownership decision.
+- **FS-0.2 · T1.5 — multi-version binding registry** (#50 ·
+  [PR #6](https://github.com/hbulgarini/mn-passport-sdk/pull/6) docs +
+  [PR #7](https://github.com/hbulgarini/mn-passport-sdk/pull/7), merged
+  2026/07/29 — #7's stacked branch carried both the tooling + data layer
+  and the resolution surface, so the planned third PR was subsumed) —
+  `acc-versions.generated.json` (every supported version, `current`
+  pointer, provenance keys) with its tested TypeScript mirror; per-version
+  artefacts; `--pin`/`--current`/`--force` and `--check` (recompile
+  determinism for `current`); `resolveBinding`, `SUPPORTED_BINDINGS`,
+  `UnsupportedBindingError`, `detectDeployedVersion`, the deep-frozen
+  registry (reshaped per PR #7 review), and the platform-neutrality lint
+  over every bundle-bound package. Which version an account uses is
+  kernel-owned metadata (spec §4.1); the upgrade path stays deferred
+  (roadmap §8).
+
 ## In progress
 
-- **FS-0.2 · T1 — artefact ingestion + binding pin** (#50, reused for M0
-  foundations) — `scripts/build-acc-artefact.mjs` compiles the prototype
-  ACC (`compact` CLI, ~30 s, 12 provable circuits) into the gitignored
-  artefact directory; the committed manifest pins the deterministic facts
-  (source hash, toolchain, circuit table, and `keyLocation`s) and
-  `BINDING_VERSION 0.0.0-prototype.1` `[PROVISIONAL]` — **including
-  committed per-file content hashes** (**ADR 0004**: compilation is
-  deterministic; ADR 0003's non-reproducibility finding was a false
-  positive in our own drift check, since corrected). `--check` recompiles
-  and must reproduce the committed pin; mutation-tested. Upstream
-  [passport#116](https://github.com/midnightntwrk/passport/issues/116) was filed on the false finding — a full replacement
-  body is drafted (the versioning-ownership decision: contract repository
-  vs SDK release, with pros and cons) for the human to post. Branch `feat/fs-0.2-t1-artefact`.
+- **FS-0.2 · T2 — typed deploy caller** (#50) — `buildDeployArgs` shapes
+  the ACC constructor call (ordered commitments, version-gated by
+  `assertBindingCompatible`, the §8.2 connect-time guard);
+  `bindAccModule` gives structural typing over the runtime-loaded
+  generated module (`AccModuleShapeError`; shape check only — byte
+  integrity is T3's) — the committed package stays dependency-free
+  because the generated module needs `@midnight-ntwrk/compact-runtime`,
+  added as a root devDependency (0.16.0, exactly the artefact's recorded
+  runtime version, past cooldown; first entry in
+  `docs/compatibility.md`). The spec's "pure-commitment re-exports"
+  became this structural mirror + binder (spec D-9, closing OQ-5).
+  Branch `feat/fs-0.2-t2-deploy`.
 
 ## Backlog
 
-- **FS-0.2 · T1.5 — multi-version binding registry** (#50) — spec D-8,
-  raised at T1 review: the committed registry of all supported binding
-  versions (`acc-versions.generated.json`), per-version artefact layout,
-  the script's `--pin`/`--check <version>` modes, and `resolveBinding` —
-  each account pins its version at deploy; the upgrade path is a roadmap
-  §8 item (spec D-8, OQ-7); split out of T1 by the 600-line hard budget.
-  Waiting on T1 merge.
-- **FS-0.2 · T2 — typed deploy caller** (#50) — the deploy (constructor)
-  caller over the generated module plus the pure commitment circuits;
-  `assertBindingCompatible` over the supported set (D-8). Waiting on T1.5.
 - **FS-0.2 · T3 — loader integrity** (#50) — `loadArtefact` verifying the
-  committed hashes (ADR 0004); `ZkArtifactIntegrityError`. Waiting on T2.
+  committed hashes (ADR 0004); `ZkArtifactIntegrityError`; hardening the
+  binder's trust story (property-picking is done at T2; byte integrity
+  lands here). Waiting on T2.
 - **FS-0.2 · claim-name caller** (#50) — **blocked**: the prototype has no
   name circuit and the C2 name-service artefact does not exist yet (spec
   OQ-4, human decision 2026/07/29). Resumes when the contract team
