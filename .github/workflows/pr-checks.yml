@@ -61,9 +61,10 @@ jobs:
       - name: Lint and format check (skips until package.json lands)
         run: |
           if [ -f package.json ]; then
-            npm ci
-            npm run lint --if-present
-            npm run format:check --if-present
+            corepack enable
+            pnpm install --frozen-lockfile
+            pnpm run lint --if-present
+            pnpm run format:check --if-present
           else
             echo "No package.json yet — skipping."
           fi

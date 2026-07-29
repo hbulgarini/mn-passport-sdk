@@ -7,9 +7,8 @@
 > [`development-workflow.md`](../../../development-workflow.md), the repo README,
 > [`beta-scope.md`](../../../beta-scope.md) §3, [`roadmap.md`](../../roadmap.md) §2–§3,
 > and [ADR 0001](../../../adr/0001-beta-includes-local-signer-fallback.md).
-> **GitHub issue:** **#TBD** ([midnightntwrk/passport](https://github.com/midnightntwrk/passport/issues))
-> — the brief itself carries `#TBD`; kept as an open item (OQ-1). `spec-driver`
-> must not plan tranches until it is filled in.
+> **GitHub issue:** [midnightntwrk/passport#50](https://github.com/midnightntwrk/passport/issues/50)
+> (assigned 2026/07/29; OQ-1 resolved).
 
 ## 1. Objective
 
@@ -23,12 +22,13 @@ exit "`core` and `contract` build, a stub wiring compiles end-to-end, CI green"
 (roadmap §2 M0); the ACC-artefact wiring is FS-0.2, and the kernel plus the
 per-seam specs are FS-0.3–FS-0.8 (brief; ADR 0002; §6 below).
 
-**Current state (2026/07/29).** Part of the workflow wiring already exists in
-the working tree, uncommitted: the `mn-passport-skills` plugin directory (a
-rename of the earlier `mn-skills`), `.github/workflows/pr-checks.yml`,
-`STATE.md`, and the `.mn-passport-skills/` gitignore entry. Tranche T3 lands
-and verifies that material; it does not recreate it. No workspace or package
-code exists at all — T1 and T2 are greenfield.
+**Current state (updated 2026/07/29, post-`c7c9b9b`).** The workflow wiring —
+the `mn-passport-skills` plugin (renamed from `mn-skills`),
+`.github/workflows/pr-checks.yml`, `STATE.md`, and the `.mn-passport-skills/`
+gitignore entry — is **landed on `main`** (commit `c7c9b9b`, 2026/07/29).
+Tranche T3 therefore reduces to **CI activation** (build + test in the gate,
+the gitignore backstop). No workspace or package code existed before T1 —
+T1 and T2 are greenfield.
 
 ## 2. Scope
 
@@ -61,8 +61,7 @@ code exists at all — T1 and T2 are greenfield.
   `connect → core` imports (brief; architecture §4.4), plus the manifest-level
   edge check behind it.
 - **The `mn-passport-skills` plugin present and auto-enabled** (via
-  `.claude/settings.json`, per the README) — committing the working-tree
-  rename.
+  `.claude/settings.json`, per the README) — landed on `main`, 2026/07/29.
 - **The CI gate** — `.github/workflows/pr-checks.yml` enforcing description +
   diff-size + gitignore + format/lint + the 7-day dependency cooldown (brief;
   development-workflow §4). The existing workflow already covers description,
@@ -70,7 +69,8 @@ code exists at all — T1 and T2 are greenfield.
   `.mn-passport-skills/` or register file ever tracked) is the one job still to
   add. Activating build + test on the new workspace rides the same job.
 - **`STATE.md`** committed and current; **`.mn-passport-skills/` gitignored**
-  (both already in the working tree — T3 verifies and lands them).
+  (both landed on `main` — T3 adds the CI backstop that keeps the latter
+  true).
 - **The `deps` and `devenv` watchers** running on their own cadence
   (development-workflow §2 Watchers) — present via the plugin; T3 confirms
   they fire.
@@ -104,7 +104,9 @@ code exists at all — T1 and T2 are greenfield.
 | D-5 | `core` is **platform-neutral**: no `fs`, `window`, or `fetch`; platform code belongs to the platform adapters. | This is what keeps the kernel portable and unit-testable. | architecture §4.4 |
 | D-6 | All dependencies are **exact-pinned**, versions verified with `npm view`, none younger than **7 days**, lockfile committed, no custom registry config. | Supply-chain cooldown quarantine; CI rejects violations. | development-workflow §2 (deps), §4 |
 | D-7 | Ship as **ESM** (`"type": "module"`) with types built by `tsc` project references; no bundler at this stage. | Passport is browser-first (architecture §4.4); bundling is a publish-time concern deferred with the release skill. | architecture §4.4; development-workflow §2 |
-| D-8 | The workflow wiring already in the working tree (plugin, CI gate, `STATE.md`, gitignore) is **landed by T3 as-is**, not rebuilt. | It matches the brief's scope; recreating it would be churn. | repo state; brief |
+| D-8 | The workflow wiring (plugin, CI gate, `STATE.md`, gitignore) landed on `main` ahead of the tranches (`c7c9b9b`, 2026/07/29); T3 verifies it and reduces to CI activation. | It matches the brief's scope; recreating it would be churn. | repo state; brief |
+| D-9 | **pnpm** is the package manager (human decision, 2026/07/29, revising the T1 npm default in the same tranche): `pnpm-workspace.yaml` defines the workspace, `packageManager` pins `pnpm@10.33.0` (corepack), and `pnpm-lock.yaml` is the committed lockfile. The CI gate installs with `pnpm install --frozen-lockfile`, and the cooldown script reads pnpm lockfiles. Version *verification* stays `npm view` — a registry query, not an install tool. The yarn artefacts leave `.gitignore`; `engines` stays `">=22"` with **22 as the exercised baseline** (CI + `.nvmrc`). | One tool, one story across workspace file, lockfile, CI gate, and cooldown check. | `pr-checks.yml`; development-workflow §2 (deps), §4; **resolves OQ-2 (2026/07/29, at T1 as its route required)** |
+| D-10 | Tests are **`.mjs` on `node:test`**, typechecked via `allowJs`/`checkJs` under the strict base config. A TypeScript test path is decided at T2 only if a test actually needs types. | Keeps the runner dependency-free and avoids relying on type-stripping the `>=22` floor does not guarantee. | D-9 (proposal defaults); Node 22 baseline |
 
 Marked **[proposed — docs silent]**: the concrete tooling inside D-7 (no
 bundler, `tsc -b`) and the test-runner choice (§8 leans on `midnight-cq` per
@@ -119,7 +121,8 @@ the brief holds it open and the repo's own signals conflict (OQ-2).
 **Workspace layout**
 
 ```
-package.json            # workspaces: ["packages/*"]; scripts: build/test/lint/format:check
+package.json            # packageManager: pnpm; scripts: build/test/lint/format:check
+pnpm-workspace.yaml     # packages: [packages/*]  (D-9)
 tsconfig.base.json      # strict, ESM, composite project references
 packages/
   core/                 # shell; FS-0.3 (kernel) + FS-0.4–0.8 (seams) fill it
@@ -130,7 +133,7 @@ packages/
   adapter-signer-local/  # contingency fallback (ADR 0001)
   adapter-prover-remote/
 tests/
-  dependency-rules.test.ts   # manifest-level assertion of the §4.4 graph
+  dependency-rules.test.mjs  # manifest-level assertion of the §4.4 graph (D-10)
 mn-passport-skills/     # the plugin (exists; T3 commits the rename)
 .github/workflows/pr-checks.yml   # + gitignore-backstop job, build/test activation
 STATE.md
@@ -255,12 +258,11 @@ not the final gated plan. Estimates exclude the lockfile and generated code
 |---|---|---|---|
 | T1 | **Monorepo + build/test** | root manifest + workspaces, `tsconfig.base.json`, formatter config, `.nvmrc`/`engines`, root scripts, lockfile | ~10 files, ≤ 200 net lines |
 | T2 | **Package skeletons + the dependency-boundary lint** | seven package skeletons (manifest, tsconfig, `export {}` entrypoint, placeholder test); the lint rule + manifest-level test | ~23 files, ≤ 380 net lines |
-| T3 | **Plugin + CI gate + `STATE.md` + gitignore** | commit the `mn-skills → mn-passport-skills` rename and settings; extend `pr-checks.yml` (build/test activation + gitignore backstop); land `STATE.md` and `.gitignore` updates | mostly existing material; net-new ≤ 150 lines |
+| T3 | **CI activation** (reduced — the plugin, `STATE.md`, and gitignore landed on `main` in `c7c9b9b`, D-8) | extend `pr-checks.yml`: run build + test in the gate, add the gitignore backstop (`.mn-passport-skills/` never tracked), drive Node from `.nvmrc` (`node-version-file`) | ~2 files, ≤ 100 net lines |
 
-Each sits under the 400-line soft budget. T3's diff will look large in raw
-lines because of the plugin rename; rename detection in `check-diff-size.sh`
-means pure moves cost nothing, so the *net* figure stays small — if it does
-not, T3 splits.
+Each sits under the 400-line soft budget (the plugin rename that once
+threatened T3's raw size landed separately on `main`, so T3 is small and
+purely additive).
 
 ## 10. Respecting the normative MUSTs
 
@@ -276,9 +278,9 @@ not, T3 splits.
 
 | # | Question | Route |
 |---|---|---|
-| OQ-1 | **GitHub issue: #TBD** — the brief carries `#TBD` too. Before `spec-driver` plans, an issue must exist in `midnightntwrk/passport` and be recorded here and in the brief — no issue, no plan (development-workflow §3). | Human — create/identify the issue |
-| OQ-2 | **Workspace tool** (brief: "confirm yarn vs pnpm against the README"). The README names none, and the repo's signals conflict: CI runs `npm ci` and the deps skill speaks `npm view`, while `.gitignore` carries yarn-berry artefacts (`.pnp.*`, `.yarn/*`). *Lean:* npm workspaces — it matches the CI gate and the cooldown tooling as written; whichever way it goes, gate scripts, `.gitignore`, and docs must end up telling one story. | Decision at T1; record in this spec (+ doc-sync if the workflow doc's npm phrasing changes) |
-| OQ-3 | **The advisory diff-size threshold** (brief). The gate is 400 soft / 600 hard (development-workflow §5; `check-diff-size.sh`), and the exclusions cover lockfiles/generated/fixtures — but not config boilerplate, which dominates scaffolding tranches. Is 400 the right advisory level for M0, or is the estimate discipline in §9 enough? | Confirm at T1 review; any change to the numbers is a doc-sync (they appear in three places) |
+| OQ-1 | ~~GitHub issue~~ **Resolved 2026/07/29:** [midnightntwrk/passport#50](https://github.com/midnightntwrk/passport/issues/50), recorded here and in the brief. | Closed |
+| OQ-2 | ~~Workspace tool~~ **Resolved 2026/07/29 at T1: pnpm (D-9)** — decided as npm at first, revised to pnpm by human decision within the same tranche. The yarn artefacts are dropped from `.gitignore`, so gate scripts, lockfile, and docs tell one story. | Closed (D-9) |
+| OQ-3 | ~~Advisory diff-size threshold~~ **Resolved 2026/07/29 at T1: the 400/600 numbers stand.** T1's config-heavy diff landed well under the soft line (lockfile excluded by the gate), so scaffolding needs no special threshold; revisit only if an M0 tranche actually trips 400. | Closed |
 | OQ-4 | **Exact `adapter-*` skeleton set.** The brief says "the `adapter-*` dirs"; beta-scope §3 names two (`adapter-signer-managed`, `adapter-prover-remote`); roadmap §3 also lists `adapter-browser` for M0–M1. This spec scaffolds the two; confirm whether `adapter-browser` joins now or with its first real code in M1. | Confirm at plan phase; beta-scope/roadmap doc-sync if the lists should agree |
 | OQ-5 | **Linter choice for the boundary rule.** The brief mandates a lint rule; the docs name no linter. Pick one weighing dependency count against the 7-day cooldown; record it. | Decision at T2; note in spec |
 | OQ-6 | **The settlement adapter is unnamed.** Roadmap §3 lists "`adapter-*` settlement seam" (M1) without a package name; FS-0.6 defines the Settlement seam interface, so the docs must name the adapter before its M1 spec. | `mn-passport-skills:doc-sync` before the M1 spec |
