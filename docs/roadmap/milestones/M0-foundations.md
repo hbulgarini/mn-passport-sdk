@@ -42,7 +42,8 @@
   pinned binding with artefact-integrity.
 - **In scope.** `mn-passport-contract` wraps the compiled ACC circuit + ZKIR +
   verifier key + `keyLocation`; typed callers for the circuits beta needs
-  (deploy, name claim); a pinned binding version; drift detection
+  (deploy — claim-name deferred: no C2 artefact exists yet, see the spec's
+  OQ-4); a pinned binding version; drift detection
   (`ZkArtifactIntegrityError` surfaced).
 - **Out of scope.** dApp-contract bindings; ACC circuits beyond onboarding.
 - **Backing.** requirements §1.1 (ACC); architecture §4.4 (contract package is
@@ -52,15 +53,17 @@
   artefact version and its integrity hash.
 - **Dependencies.** FS-0.1. **Gate:** contract team (a deployed/compiled ACC
   artefact). Start against the prototype ACC (`experiments/account-custody-prototype`).
-- **Acceptance.** Resolves the ACC artefact, exposes typed deploy + name-claim
-  callers, and fails loudly on version drift.
+- **Acceptance.** Resolves the ACC artefact, exposes the typed deploy
+  caller (claim-name deferred — spec OQ-4), and fails loudly on version
+  drift.
 - **Verify.** Compile the ACC artefact; type-check the binding; force a key
   mismatch and confirm the integrity error fires.
 - **Tranches.** (1) artefact ingestion + ZK-config wiring + version pin;
-  (2) typed callers for deploy + name claim; (3) drift/integrity check.
+  (2) the typed deploy caller (claim-name deferred); (3) drift/integrity
+  check.
 - **Open questions.** The artefact host (where prover/verifier keys + ZKIR are
   served); the exact ACC version pinned for beta.
-- **Issue.** `#TBD`
+- **Issue.** [midnightntwrk/passport#50](https://github.com/midnightntwrk/passport/issues/50) (reused from FS-0.1)
 
 ## FS-0.3 — Kernel & command/state skeleton
 

@@ -7,9 +7,9 @@
 > [`architecture.md`](../../../architecture.md) §4.4 and §4.6 (+ §8 decision 2),
 > [`provider-integration.md`](../../../provider-integration.md) §5.1 and §6, and
 > [`beta-scope.md`](../../../beta-scope.md) §3.
-> **GitHub issue:** **#TBD** ([midnightntwrk/passport](https://github.com/midnightntwrk/passport/issues))
-> — the brief carries `#TBD`; kept as an open item (OQ-1). `spec-driver` must
-> not plan tranches until it is filled in.
+> **GitHub issue:** [midnightntwrk/passport#50](https://github.com/midnightntwrk/passport/issues/50)
+> (reused from FS-0.1 by human decision, 2026/07/29 — one issue anchors M0's
+> foundations work; OQ-1 resolved).
 
 ## 1. Objective
 
@@ -31,16 +31,27 @@ version pin** the milestone names (roadmap §2 M0).
   build: the compiled contract module, the ZKIR, the verifier key, and the
   **`keyLocation`** references the proving & settlement service resolves
   prover keys by (brief; provider-integration §5.1, §6).
-- **Typed circuit callers for the circuits beta needs** — **deploy ACC** and
-  **claim name** only (beta-scope §2 item 1, §3).
+- **Typed circuit callers for the circuits beta needs** — **deploy ACC**
+  only (human decision, 2026/07/29: the prototype has no name-claim circuit,
+  so the claim-name caller **waits for the real C2 artefact** rather than
+  binding a stand-in — resolves OQ-4). Recon facts the binding reflects:
+  the ACC has **no deploy circuit** — deployment is the Compact
+  **constructor** (`initial_device_commitment, recovery_commitment`), with
+  the exported pure commitment circuits used to derive its arguments.
 - **The pinned binding version** — one exact ACC artefact version, exported as
   the binding axis (`BINDING_VERSION`, reserved by FS-0.1 D-4), plus the
   connect-time version guard the compatibility contract requires (architecture
   §4.6, §8 decision 2).
-- **Drift / integrity detection** — artefact keys pinned by a content hash
-  tied to the verifier key, so a stale or swapped artefact **fails loudly**
-  with `ZkArtifactIntegrityError` rather than producing an invalid proof
-  (provider-integration §5.1).
+- **Drift / integrity detection** — per
+  [ADR 0004](../../../adr/0004-artefact-hashes-committed-compiler-deterministic.md):
+  compilation is **deterministic** for a given source and toolchain (an
+  earlier non-reproducibility finding, ADR 0003, was a false positive in
+  our own drift check), so the committed manifest carries **per-file
+  content hashes** of every consumed byte — re-derivable by anyone via
+  recompile. A stale, swapped, or tampered artefact **fails loudly**
+  (`ZkArtifactIntegrityError`, T3), and `--check` recompiles and compares.
+  The hashes stay SDK-derived and `[PROVISIONAL]` until the contract team
+  publishes official ones ([passport#116](https://github.com/midnightntwrk/passport/issues/116)).
 
 ### Out
 
@@ -54,8 +65,10 @@ version pin** the milestone names (roadmap §2 M0).
 - **Prover keys in the package** — prover keys are fetched by the enclave from
   the public artefact host via `keyLocation`, never shipped from the device or
   bundled in the SDK (provider-integration §5.1 hardening 2, §6).
-- **Compiling the contract** — never; the SDK consumes the published build
-  (architecture §8 decision 2).
+- **Compiling the contract in the shipped surface** — never; the SDK
+  consumes the published build (architecture §8 decision 2). The dev-only
+  prototype compile (`build:artefact`, D-6) exists precisely until that
+  build is published; its output is gitignored and never packaged.
 
 ## 3. Decisions
 
@@ -64,8 +77,8 @@ version pin** the milestone names (roadmap §2 M0).
 | D-1 | The ACC artefact is **externally owned and versioned**; this package holds only typed bindings over the published build (compiled module, ZK assets, generated types). | Decouples SDK releases from contract recompilation and insulates the SDK from toolchain instability, which the contract team manages. | architecture §8 decision 2, §4.4 |
 | D-2 | The artefact bundle carries **`keyLocation` strings, not prover keys** — the device resolves ZKIR/verifier key to build preimages; the enclave fetches and caches the 10–80 MB prover key itself. | Uploading prover keys per proof is the main mobile cost, and the keys are public. | provider-integration §5.1, §6 |
 | D-3 | **One exact pinned artefact version**, exported as `BINDING_VERSION`, guarded at connect time against the deployed ACC (an SDK version resolves against a supported ACC version range). | The binding axis must never be conflated with the wire axis; the guard is the compatibility contract. | architecture §4.6, §8 decision 2 |
-| D-4 | **Integrity by content hash tied to the verifier key**; any mismatch surfaces `ZkArtifactIntegrityError` before proving is attempted. | A stale or swapped key must fail loudly, not produce an invalid proof. | provider-integration §5.1; brief |
-| D-5 | Typed callers cover **deploy + name claim only**. | Beta's onboarding slice; anything more over-specifies beyond `beta-scope.md`. | beta-scope §2 item 1, §3; brief |
+| D-4 | **Integrity by committed content hash** (ADR 0004): the manifest commits per-file hashes of every consumed artefact byte, alongside the source hash, toolchain, and circuit table. Any mismatch surfaces `ZkArtifactIntegrityError` before proving is attempted; `--check` recompiles and must reproduce the committed pin exactly. | Compilation is deterministic, so committed hashes are independently re-derivable — the strongest available pin until official published hashes replace ours ([passport#116](https://github.com/midnightntwrk/passport/issues/116)). | ADR 0004; provider-integration §5.1; brief |
+| D-5 | Typed callers cover **deploy only** — the claim-name caller is deferred until the C2 artefact exists (human decision 2026/07/29, OQ-4). Deploy is the Compact **constructor**, so the caller shapes constructor arguments rather than a circuit call. | Beta's onboarding slice; a stand-in binding would freestyle an interface the docs have not set. | beta-scope §2 item 1, §3; brief; OQ-4 |
 | D-6 | Development starts against the **prototype ACC** (`experiments/account-custody-prototype`), swapped for the contract team's published artefact when the gate opens — same binding surface, different pin. | The gate blocks integration, not the SDK-side build. | brief; roadmap §4; provider-integration §10 |
 | D-7 | Package dependencies: no workspace package (FS-0.1 D-2); `midnight-js` is the one permitted external runtime dependency. | `contract` is a foundation package both `core` and `connect` may link; it must stay kernel-free. | architecture §4.4, §4.6 (container view) |
 
@@ -85,11 +98,10 @@ export interface AccArtefact {
   circuits: Record<CircuitName, {
     zkir: Uint8Array;
     verifierKey: Uint8Array;
-    keyLocation: string;                       // resolved by the enclave, §5.1
-    integrityHash: string;                     // content hash tied to the verifier key
+    keyLocation: string;    // extension-free base; resolvers add layout + suffix (§5.1, §6)
   }>;
 }
-export type CircuitName = 'deployAcc' | 'claimName';   // beta slice only (D-5)
+export type CircuitName = keyof typeof ACC_MANIFEST.circuits;   // the artefact inventory
 
 export function loadArtefact(source: ArtefactSource): Promise<AccArtefact>;
 // throws ZkArtifactIntegrityError on any hash/version mismatch (D-4)
@@ -97,10 +109,12 @@ export function loadArtefact(source: ArtefactSource): Promise<AccArtefact>;
 export class ZkArtifactIntegrityError extends Error { /* circuit, expected, actual */ }
 
 // ── typed circuit callers (deploy + name claim) ──
-export function deployAcc(args: DeployAccArgs): TypedCall<'deployAcc'>;
-export function claimName(args: { name: string }): TypedCall<'claimName'>;
-// a TypedCall carries the circuit identity, typed args, and its ZK-config
-// references — FS-1.1 turns it into a challenge + preimage
+export function buildDeployArgs(args: {
+  deviceCommitment: bigint;      // via derive_device_commitment (pure)
+  recoveryCommitment: bigint;    // via derive_recovery_commitment (pure)
+}): AccConstructorArgs;          // deploy = the Compact constructor (D-5)
+// claimName waits for the C2 artefact (OQ-4); FS-1.1 turns typed calls
+// into challenges + preimages
 
 // ── the connect-time guard (architecture §8 decision 2) ──
 export function assertBindingCompatible(deployedAccVersion: string): void;
@@ -144,10 +158,13 @@ cooldown and exact-pin rules (development-workflow §2 deps).
 From the brief, made observable:
 
 1. **Resolves the ACC artefact** — `loadArtefact` returns a verified
-   `AccArtefact` for the pinned version, from a clean checkout.
-2. **Exposes typed deploy + name-claim callers** — both compile against the
-   generated types, and a consumer (the FS-0.1 wiring smoke test, extended)
-   can construct both calls with typed args.
+   `AccArtefact` for the pinned version wherever the artefact exists (built
+   locally for the prototype; from the published bytes later — ADR 0003). On
+   a clean checkout without the artefact, the binding surface still builds
+   and the artefact-dependent tests skip loudly.
+2. **Exposes the typed deploy caller** — it compiles against the generated
+   types, and a consumer (the FS-0.1 wiring smoke test, extended) constructs
+   the constructor arguments with typed inputs. (Claim-name: deferred, OQ-4.)
 3. **Fails loudly on drift** — corrupt one verifier key (or bump the artefact
    version without moving the pin): `loadArtefact` rejects with
    `ZkArtifactIntegrityError` naming the circuit; nothing downstream runs.
@@ -181,8 +198,8 @@ plan (estimates exclude generated code and fixtures):
 | # | Tranche (brief) | Contents | Estimate |
 |---|---|---|---|
 | T1 | **Artefact ingestion + ZK-config wiring + version pin** | `AccArtefact`, `loadArtefact`, `BINDING_VERSION`, the prototype-artefact fixture wiring | ~8 files, ≤ 300 net lines |
-| T2 | **Typed callers for deploy + name claim** | `TypedCall`, `deployAcc`, `claimName`, generated-type mapping, wiring-smoke extension | ~6 files, ≤ 250 net lines |
-| T3 | **Drift / integrity check** | content-hash pinning, `ZkArtifactIntegrityError`, `assertBindingCompatible`, mismatch tests | ~5 files, ≤ 200 net lines |
+| T2 | **Typed deploy caller** (claim-name deferred, OQ-4) | `buildDeployArgs`, pure-commitment re-exports, generated-type mapping, `assertBindingCompatible`, wiring-smoke extension | ~6 files, ≤ 250 net lines |
+| T3 | **Drift / integrity check** | `loadArtefact` verifying the committed hashes (ADR 0004), `ZkArtifactIntegrityError`, `assertBindingCompatible`, mismatch tests | ~5 files, ≤ 200 net lines |
 
 ## 10. Respecting the normative MUSTs
 
@@ -198,8 +215,9 @@ plan (estimates exclude generated code and fixtures):
 
 | # | Question | Route |
 |---|---|---|
-| OQ-1 | **GitHub issue: #TBD** (dry run). Must be filled in here and in the brief before `spec-driver` plans. | Human — create/identify the issue |
-| OQ-2 | **The artefact host** (brief) — where the published build (prover/verifier keys + ZKIR) is served, and its integrity/versioning scheme. Also an open item on the provider side (provider-integration §9). | Contract team + service; `doc-sync` when fixed |
-| OQ-3 | **The exact ACC version pinned for beta** (brief) — unknowable until the contract team publishes; the prototype pin is `[PROVISIONAL]`. | Verify register; re-pin at the gate |
-| OQ-4 | **Is name-claim an ACC circuit or a separate C2 name-service contract?** (inherited from FS-1.1's open questions) — determines whether FS-0.2 ingests one artefact or two. | Contract team; `doc-sync` on the answer |
+| OQ-1 | ~~GitHub issue~~ **Resolved 2026/07/29: #50, reused from FS-0.1** (one issue for M0 foundations). | Closed |
+| OQ-2 | **The artefact host** (brief) — where the published build (prover/verifier keys + ZKIR) is served, and its integrity/versioning scheme. Also an open item on the provider side (provider-integration §9). | Contract team + service — now tracked as [passport#116](https://github.com/midnightntwrk/passport/issues/116); `doc-sync` when fixed |
+| OQ-3 | **The exact ACC version pinned for beta** (brief) — unknowable until the contract team publishes; the prototype pin is `[PROVISIONAL]`. | Verify register; re-pin when [passport#116](https://github.com/midnightntwrk/passport/issues/116) delivers the published artefact |
+| OQ-4 | ~~Name-claim location~~ **Resolved 2026/07/29: a separate contract, and no artefact exists yet.** The prototype ACC has no name circuit; the nearest implementation is the demo-grade `identity_registry.compact` in `demo/mn-passport-foundations`. Human decision: FS-0.2 binds **deploy only**; the claim-name caller is deferred until the contract team publishes the C2 artefact (backlogged with that reason, never silently dropped). | Closed; claim-name → backlog |
 | OQ-5 | **Do the published builds include generated TypeScript types** (architecture §8 decision 2 says "generated types"), and are they stable enough to re-export as the caller types? | Confirm with the contract team at T2 |
+| OQ-6 | ~~Compiler non-reproducibility~~ **Corrected 2026/07/29 (ADR 0004): compilation is deterministic** — the finding behind [passport#116](https://github.com/midnightntwrk/passport/issues/116) was a false positive (formatting artefact in our drift check); a full replacement body reframing #116 as the versioning-ownership decision (contract repository vs SDK release) is drafted. Remaining open validation: **cross-machine** reproducibility (verified on one machine only) — confirmed cheaply the first time a second machine runs `pnpm run build:artefact --check`. | Verify register; amend #116 (human) |
