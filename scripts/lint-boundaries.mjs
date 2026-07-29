@@ -3,8 +3,10 @@
 // Every workspace package may import only the @midnight-ntwrk/mn-passport-*
 // packages the architecture permits — most critically, `connect` must never
 // import `core` or any adapter, so a dApp can never pull the kernel into its
-// bundle. Also enforces D-5's import-level half: `core` is platform-neutral,
-// so it must not import Node built-ins. The manifest-level twin lives in
+// bundle. Also enforces platform neutrality at the import level: the four
+// packages that reach browser/PWA bundles (`protocol`, `contract`, `core`,
+// and `connect` — architecture §4.4) must not import Node built-ins; only
+// adapters may be platform-specific. The manifest-level twin lives in
 // tests/dependency-rules.test.mjs; both consume scripts/dependency-graph.mjs.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -15,6 +17,7 @@ import { ALLOWED, SCOPE } from './dependency-graph.mjs';
 const IMPORT_RE =
   /(?:\bfrom|\bimport|\brequire)\s*\(?\s*['"`](@midnight-ntwrk\/mn-passport-[^'"`/]+)/g;
 const NODE_BUILTIN_RE = /(?:\bfrom|\bimport|\brequire)\s*\(?\s*['"`](node:[^'"`]+)/g;
+const PLATFORM_NEUTRAL = new Set(['protocol', 'contract', 'core', 'connect']);
 
 /** @param {string} dir @returns {string[]} */
 function sourceFiles(dir) {
@@ -46,10 +49,10 @@ for (const [pkg, allowed] of Object.entries(ALLOWED)) {
         violations.push(`${file}: "${pkg}" must not import "${target}" (architecture §4.4).`);
       }
     }
-    if (pkg === 'core') {
+    if (PLATFORM_NEUTRAL.has(pkg)) {
       for (const match of text.matchAll(NODE_BUILTIN_RE)) {
         violations.push(
-          `${file}: "core" must not import "${match[1]}" — the kernel is platform-neutral (architecture §4.4).`,
+          `${file}: "${pkg}" must not import "${match[1]}" — it ships to browser/PWA bundles (architecture §4.4).`,
         );
       }
     }
