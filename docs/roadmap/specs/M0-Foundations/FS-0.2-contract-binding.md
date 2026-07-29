@@ -81,6 +81,7 @@ version pin** the milestone names (roadmap §2 M0).
 | D-5 | Typed callers cover **deploy only** — the claim-name caller is deferred until the C2 artefact exists (human decision 2026/07/29, OQ-4). Deploy is the Compact **constructor**, so the caller shapes constructor arguments rather than a circuit call. | Beta's onboarding slice; a stand-in binding would freestyle an interface the docs have not set. | beta-scope §2 item 1, §3; brief; OQ-4 |
 | D-6 | Development starts against the **prototype ACC** (`experiments/account-custody-prototype`), swapped for the contract team's published artefact when the gate opens — same binding surface, different pin. | The gate blocks integration, not the SDK-side build. | brief; roadmap §4; provider-integration §10 |
 | D-7 | Package dependencies: no workspace package (FS-0.1 D-2); `midnight-js` is the one permitted external runtime dependency. | `contract` is a foundation package both `core` and `connect` may link; it must stay kernel-free. | architecture §4.4, §4.6 (container view) |
+| D-8 | **The binding is a registry, not a single pin** (added 2026/07/29 at T1 review): `packages/contract/acc-versions.generated.json` commits every **supported** binding version — per-version source hash, toolchain, `keyLocation`s, and content hashes — with a `current` pointer; `manifest.generated.ts` is derived from it. Artefacts live per version (`artefact/<version>/`), and `assertBindingCompatible` checks the deployed ACC against the supported *set*. Adding a version appends an entry; retiring one is a reviewed deletion. | An SDK version must resolve against a supported ACC version **range**, not one hardcoded pin — older deployed contracts stay usable across artefact bumps; this is also the structure the `deps` watcher's compatibility matrix reads. | architecture §8 decision 2, §4.6; development-workflow §2 (deps); human finding at T1 review |
 
 ## 4. Surface and interfaces
 
@@ -198,7 +199,8 @@ plan (estimates exclude generated code and fixtures):
 | # | Tranche (brief) | Contents | Estimate |
 |---|---|---|---|
 | T1 | **Artefact ingestion + ZK-config wiring + version pin** | `AccArtefact`, `loadArtefact`, `BINDING_VERSION`, the prototype-artefact fixture wiring | ~8 files, ≤ 300 net lines |
-| T2 | **Typed deploy caller** (claim-name deferred, OQ-4) | `buildDeployArgs`, pure-commitment re-exports, generated-type mapping, `assertBindingCompatible`, wiring-smoke extension | ~6 files, ≤ 250 net lines |
+| T1.5 | **Multi-version binding registry** (D-8; split out of T1 — the hard budget) | `acc-versions.generated.json`, per-version artefact layout (`artefact/<version>/`), script rework (`--pin <version>`, `--check [version]`), manifest derived from the registry, test updates | ~5 files, ≤ 200 net lines |
+| T2 | **Typed deploy caller** (claim-name deferred, OQ-4) | `buildDeployArgs`, pure-commitment re-exports, generated-type mapping, `assertBindingCompatible` over the supported set (D-8), wiring-smoke extension | ~6 files, ≤ 250 net lines |
 | T3 | **Drift / integrity check** | `loadArtefact` verifying the committed hashes (ADR 0004), `ZkArtifactIntegrityError`, `assertBindingCompatible`, mismatch tests | ~5 files, ≤ 200 net lines |
 
 ## 10. Respecting the normative MUSTs

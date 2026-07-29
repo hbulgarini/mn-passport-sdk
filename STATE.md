@@ -51,9 +51,14 @@
 
 ## Backlog
 
+- **FS-0.2 · T1.5 — multi-version binding registry** (#50) — spec D-8,
+  raised at T1 review: the committed registry of all supported binding
+  versions (`acc-versions.generated.json`), per-version artefact layout,
+  and the script's `--pin`/`--check <version>` modes; split out of T1 by
+  the 600-line hard budget. Waiting on T1 merge.
 - **FS-0.2 · T2 — typed deploy caller** (#50) — the deploy (constructor)
   caller over the generated module plus the pure commitment circuits;
-  `assertBindingCompatible`. Waiting on T1 merge.
+  `assertBindingCompatible` over the supported set (D-8). Waiting on T1.5.
 - **FS-0.2 · T3 — loader integrity** (#50) — `loadArtefact` verifying the
   committed hashes (ADR 0004); `ZkArtifactIntegrityError`. Waiting on T2.
 - **FS-0.2 · claim-name caller** (#50) — **blocked**: the prototype has no
