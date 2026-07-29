@@ -11,7 +11,8 @@
     "test": "pnpm run build && node --test",
     "lint": "node scripts/lint-boundaries.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "build:artefact": "node scripts/build-acc-artefact.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.1",

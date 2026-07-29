@@ -27,22 +27,46 @@
   test with transitive `connect → core` closure), the wiring smoke test,
   and the `.npmrc` posture (`save-exact`, `ignore-scripts`).
 
+- **FS-0.1 · T3 — CI activation** (#50 ·
+  [PR #4](https://github.com/hbulgarini/mn-passport-sdk/pull/4), merged
+  2026/07/29) — the full gate (lint, format, build, test), the
+  `gitignore-backstop` job, Node driven from `.nvmrc`, actions pinned by
+  commit SHA. **FS-0.1 complete: issue #50 tranches 1–3 merged.**
+
 ## In progress
 
-- **FS-0.1 · T3 — CI activation** (#50) — `pr-checks.yml` now runs lint,
-  format, build, and test in a dedicated job, adds the `gitignore-backstop`
-  job (no register path tracked, ignore rule effective), drives Node from
-  `.nvmrc` (`node-version-file`), and pins both actions by commit SHA —
-  resolving three register entries on their recorded T3 trigger and
-  narrowing a fourth (the Node patch pin remains open). Watchers confirmed
-  per acceptance §7.4: the plugin's skills drove the whole spec; the
-  `deps` drift check ran (two deliberate major holds recorded); the
-  `devenv` doctor is green on toolchain and debts repo, with the Compact
-  CLI and proof server absent — open in the verify register, first needed
-  by FS-0.2/FS-0.5. Finishes FS-0.1. Branch `feat/fs-0.1-t3-ci`.
+- **FS-0.2 · T1 — artefact ingestion + binding pin** (#50, reused for M0
+  foundations) — `scripts/build-acc-artefact.mjs` compiles the prototype
+  ACC (`compact` CLI, ~30 s, 12 provable circuits) into the gitignored
+  artefact directory; the committed manifest pins the deterministic facts
+  (source hash, toolchain, circuit table, and `keyLocation`s) and
+  `BINDING_VERSION 0.0.0-prototype.1` `[PROVISIONAL]` — **including
+  committed per-file content hashes** (**ADR 0004**: compilation is
+  deterministic; ADR 0003's non-reproducibility finding was a false
+  positive in our own drift check, since corrected). `--check` recompiles
+  and must reproduce the committed pin; mutation-tested. Upstream
+  [passport#116](https://github.com/midnightntwrk/passport/issues/116) was filed on the false finding — a full replacement
+  body is drafted (the versioning-ownership decision: contract repository
+  vs SDK release, with pros and cons) for the human to post. Branch `feat/fs-0.2-t1-artefact`.
 
 ## Backlog
 
-- **FS-0.2–FS-0.8** (`#TBD`) — authored specs in
+- **FS-0.2 · T1.5 — multi-version binding registry** (#50) — spec D-8,
+  raised at T1 review: the committed registry of all supported binding
+  versions (`acc-versions.generated.json`), per-version artefact layout,
+  the script's `--pin`/`--check <version>` modes, and `resolveBinding` —
+  each account pins its version at deploy; the upgrade path is a roadmap
+  §8 item (spec D-8, OQ-7); split out of T1 by the 600-line hard budget.
+  Waiting on T1 merge.
+- **FS-0.2 · T2 — typed deploy caller** (#50) — the deploy (constructor)
+  caller over the generated module plus the pure commitment circuits;
+  `assertBindingCompatible` over the supported set (D-8). Waiting on T1.5.
+- **FS-0.2 · T3 — loader integrity** (#50) — `loadArtefact` verifying the
+  committed hashes (ADR 0004); `ZkArtifactIntegrityError`. Waiting on T2.
+- **FS-0.2 · claim-name caller** (#50) — **blocked**: the prototype has no
+  name circuit and the C2 name-service artefact does not exist yet (spec
+  OQ-4, human decision 2026/07/29). Resumes when the contract team
+  publishes C2.
+- **FS-0.3–FS-0.8** (`#TBD`) — authored specs in
   [`docs/roadmap/specs/M0-Foundations/`](./docs/roadmap/specs/M0-Foundations/);
   not planned — each still needs its GitHub issue (no issue, no plan).
