@@ -54,8 +54,10 @@
 - **FS-0.2 · T1.5 — multi-version binding registry** (#50) — spec D-8,
   raised at T1 review: the committed registry of all supported binding
   versions (`acc-versions.generated.json`), per-version artefact layout,
-  and the script's `--pin`/`--check <version>` modes; split out of T1 by
-  the 600-line hard budget. Waiting on T1 merge.
+  the script's `--pin`/`--check <version>` modes, and `resolveBinding` —
+  each account pins its version at deploy; the upgrade path is a roadmap
+  §8 item (spec D-8, OQ-7); split out of T1 by the 600-line hard budget.
+  Waiting on T1 merge.
 - **FS-0.2 · T2 — typed deploy caller** (#50) — the deploy (constructor)
   caller over the generated module plus the pure commitment circuits;
   `assertBindingCompatible` over the supported set (D-8). Waiting on T1.5.

@@ -167,7 +167,15 @@ private `../mn-passport-sdk-debts` sibling).
 
 ## 8. Beyond beta (deferred, with pointers)
 
-From [`beta-scope.md`](../beta-scope.md) §4 and the full specs: the decentralised
+**The ACC upgrade path** — each user's deployed contract pins the artefact
+version it was deployed at (FS-0.2 D-8); post-beta, an explicit upgrade flow
+migrates an account to a newer contract version (redeploy or the contract
+team's upgrade mechanism, state and name binding preserved) and updates the
+binding registry in lockstep. Until then the SDK serves every supported
+version side by side, and the prototype's own note stands: `transientHash`
+commitments do not survive toolchain upgrades, so an upgrade is a
+redeploy-and-migrate event (C8). Also deferred, from
+[`beta-scope.md`](../beta-scope.md) §4 and the full specs: the decentralised
 self-custody path **as the default** (the fallback adapter itself is in beta,
 ADR 0001) and progressive decentralisation; in-tab WASM proving with the k-threshold router; witness
 provisioning to dApps (#58); scoped grants (issue and spend); agents / OWS;
