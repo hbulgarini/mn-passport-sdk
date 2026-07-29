@@ -19,23 +19,30 @@
   the exact-pinned committed lockfile; the CI gate and cooldown script speak
   pnpm.
 
+- **FS-0.1 · T2 — package skeletons + dependency-boundary lint** (#50 ·
+  [PR #3](https://github.com/hbulgarini/mn-passport-sdk/pull/3), merged
+  2026/07/29) — the seven `packages/*` skeletons, two-layer boundary
+  enforcement over one shared graph module (import-level lint including
+  dynamic `import()` and `core` platform-neutrality; manifest + tsconfig
+  test with transitive `connect → core` closure), the wiring smoke test,
+  and the `.npmrc` posture (`save-exact`, `ignore-scripts`).
+
 ## In progress
 
-- **FS-0.1 · T2 — package skeletons + dependency-boundary lint** (#50) —
-  the seven `packages/*` skeletons (`export {}` entrypoints, workspace
-  edges exactly the architecture §4.4 graph), the import-level boundary
-  lint (`pnpm lint`), the manifest-level graph test with transitive
-  `connect → core` closure, the wiring smoke test, and the `.npmrc`
-  supply-chain posture (`save-exact`, `ignore-scripts` — resolving two
-  register entries). Branch `feat/fs-0.1-t2-skeletons`.
+- **FS-0.1 · T3 — CI activation** (#50) — `pr-checks.yml` now runs lint,
+  format, build, and test in a dedicated job, adds the `gitignore-backstop`
+  job (no register path tracked, ignore rule effective), drives Node from
+  `.nvmrc` (`node-version-file`), and pins both actions by commit SHA —
+  resolving three register entries on their recorded T3 trigger and
+  narrowing a fourth (the Node patch pin remains open). Watchers confirmed
+  per acceptance §7.4: the plugin's skills drove the whole spec; the
+  `deps` drift check ran (two deliberate major holds recorded); the
+  `devenv` doctor is green on toolchain and debts repo, with the Compact
+  CLI and proof server absent — open in the verify register, first needed
+  by FS-0.2/FS-0.5. Finishes FS-0.1. Branch `feat/fs-0.1-t3-ci`.
 
 ## Backlog
 
-- **FS-0.1 · T3 — CI activation** (#50) — extend `pr-checks.yml`: run build +
-  test in the format-lint job, add the gitignore backstop
-  (`.mn-passport-skills/` never tracked). Reduced from the spec's original T3:
-  the plugin rename, `STATE.md`, and `.gitignore` already landed on `main`
-  (2026/07/29). Waiting on T2 merge.
 - **FS-0.2–FS-0.8** (`#TBD`) — authored specs in
   [`docs/roadmap/specs/M0-Foundations/`](./docs/roadmap/specs/M0-Foundations/);
   not planned — each still needs its GitHub issue (no issue, no plan).
