@@ -114,8 +114,8 @@ T1 and T2 are greenfield.
 
 Marked **[proposed — docs silent]**: the concrete tooling inside D-7 (no
 bundler, `tsc -b`) and the test-runner choice (§8 leans on `midnight-cq` per
-the brief). The workspace tool itself is deliberately **not** decided here —
-the brief holds it open and the repo's own signals conflict (OQ-2).
+the brief). The workspace tool question (OQ-2) was
+resolved at T1 — pnpm, per D-9.
 
 ## 4. Surface and interfaces
 
@@ -138,7 +138,7 @@ packages/
   adapter-prover-remote/
 tests/
   dependency-rules.test.mjs  # manifest-level assertion of the §4.4 graph (D-10)
-mn-passport-skills/     # the plugin (exists; T3 commits the rename)
+mn-passport-skills/     # the plugin (landed on main in c7c9b9b)
 .github/workflows/pr-checks.yml   # + gitignore-backstop job, build/test activation
 STATE.md
 ```
@@ -174,7 +174,7 @@ const ALLOWED: Record<string, string[]> = {
 ```
 
 **CI gate** (target job set): `description` · `diff-size` ·
-`dep-cooldown` · `format-lint` (extended to run `build` + `test`) ·
+`dep-cooldown` · `build-lint-test` (lint, format, build, and test over the frozen lockfile) ·
 `gitignore-backstop` (new: fails if `.mn-passport-skills/` or any register
 file is tracked — development-workflow §4).
 
@@ -208,8 +208,8 @@ waits, and nothing needs a mock (roadmap §4 gates only M1 integration).
 
 **Toolchain dependencies to adopt** (all subject to D-6's cooldown and exact
 pins; versions verified with `npm view` at implementation time, never from
-memory): `typescript`, `@types/node`, a formatter, and the linter that carries
-the boundary rule (OQ-5). No skeleton introduces a runtime dependency.
+memory): `typescript`, `@types/node`, and a formatter (no third-party linter — OQ-5). No
+skeleton introduces a runtime dependency.
 
 ## 7. Acceptance criteria
 
@@ -237,8 +237,10 @@ From the brief, made observable:
 
 What `mn-passport-skills:verify` drives for this spec (brief):
 
-- **`midnight-cq` test runner on the skeletons** — the placeholder tests and
-  the dependency-rules test pass under it from a clean checkout.
+- **The test suite on the skeletons** — the shared root tests (workspace,
+  dependency rules, wiring smoke) pass from a clean checkout on `node:test`
+  (D-10; the brief's `midnight-cq` runner is deferred until the packages
+  carry logic worth its harness).
 - **Mutation check of the boundary** — add a `connect → core` import; lint
   must fail; revert.
 - **CI-script dry run** — `check-diff-size.sh` against each tranche branch and
@@ -286,5 +288,5 @@ purely additive).
 | OQ-2 | ~~Workspace tool~~ **Resolved 2026/07/29 at T1: pnpm (D-9)** — decided as npm at first, revised to pnpm by human decision within the same tranche. The yarn artefacts are dropped from `.gitignore`, so gate scripts, lockfile, and docs tell one story. | Closed (D-9) |
 | OQ-3 | ~~Advisory diff-size threshold~~ **Resolved 2026/07/29 at T1: the 400/600 numbers stand.** T1's config-heavy diff landed well under the soft line (lockfile excluded by the gate), so scaffolding needs no special threshold; revisit only if an M0 tranche actually trips 400. | Closed |
 | OQ-4 | ~~Exact `adapter-*` skeleton set~~ **Resolved 2026/07/29 at T2: three adapters** — `adapter-signer-managed`, `adapter-signer-local` (ADR 0001), and `adapter-prover-remote` (beta-scope §3). `adapter-browser` joins with its first real code in M1; roadmap §3 updated accordingly. | Closed |
-| OQ-5 | **Linter choice for the boundary rule.** The brief mandates a lint rule; the docs name no linter. Pick one weighing dependency count against the 7-day cooldown; record it. | Decision at T2; note in spec |
+| OQ-5 | ~~Linter choice for the boundary rule~~ **Resolved 2026/07/29 at T2 (recorded at T3): no third-party linter for now.** The boundary rule is a zero-dependency script (`scripts/lint-boundaries.mjs`, run as `pnpm lint`); the strict `tsconfig` and Prettier cover the rest at this code size. Revisit when the packages carry real logic (likely FS-0.3). | Closed |
 | OQ-6 | **The settlement adapter is unnamed.** Roadmap §3 lists "`adapter-*` settlement seam" (M1) without a package name; FS-0.6 defines the Settlement seam interface, so the docs must name the adapter before its M1 spec. | `mn-passport-skills:doc-sync` before the M1 spec |
