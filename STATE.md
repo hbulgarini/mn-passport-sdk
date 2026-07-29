@@ -12,22 +12,25 @@
   `mn-skills`), the CI gate, `STATE.md`, and the `.mn-passport-skills/`
   gitignore entry, landed directly on `main` in `c7c9b9b` (2026/07/29) ahead
   of the FS-0.1 tranches; T3 adds the CI backstop on top.
+- **FS-0.1 · T1 — workspace root** (#50 ·
+  [PR #2](https://github.com/hbulgarini/mn-passport-sdk/pull/2), merged
+  2026/07/29) — pnpm workspaces (spec D-9, pnpm@10.33.0 via corepack), the
+  strict base `tsconfig`, Prettier, the Node 22 baseline, root scripts, and
+  the exact-pinned committed lockfile; the CI gate and cooldown script speak
+  pnpm.
 
 ## In progress
 
-- **FS-0.1 · T1 — workspace root** (#50) — pnpm workspaces (spec D-9), the
-  strict base `tsconfig`, Prettier, `.nvmrc`/engines (Node 22 baseline), root
-  scripts, and the exact-pinned committed lockfile (all pins past the 7-day
-  cooldown; versions live in `package.json`). No `lint` script yet — it
-  arrives with T2's boundary lint, so CI's `lint --if-present` no-ops on this
-  PR by design. Branch `feat/fs-0.1-scaffolding`; lenses run, PR prepared.
+- **FS-0.1 · T2 — package skeletons + dependency-boundary lint** (#50) —
+  the seven `packages/*` skeletons (`export {}` entrypoints, workspace
+  edges exactly the architecture §4.4 graph), the import-level boundary
+  lint (`pnpm lint`), the manifest-level graph test with transitive
+  `connect → core` closure, the wiring smoke test, and the `.npmrc`
+  supply-chain posture (`save-exact`, `ignore-scripts` — resolving two
+  register entries). Branch `feat/fs-0.1-t2-skeletons`.
 
 ## Backlog
 
-- **FS-0.1 · T2 — package skeletons + dependency-boundary lint** (#50) —
-  seven `packages/*` skeletons (`export {}` entrypoints), the
-  `connect → core` boundary lint, the manifest-level edge test. Waiting on T1
-  merge.
 - **FS-0.1 · T3 — CI activation** (#50) — extend `pr-checks.yml`: run build +
   test in the format-lint job, add the gitignore backstop
   (`.mn-passport-skills/` never tracked). Reduced from the spec's original T3:

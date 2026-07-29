@@ -18,6 +18,46 @@ importers:
         specifier: 6.0.3
         version: 6.0.3
 
+  packages/adapter-prover-remote:
+    dependencies:
+      '@midnight-ntwrk/mn-passport-core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/adapter-signer-local:
+    dependencies:
+      '@midnight-ntwrk/mn-passport-core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/adapter-signer-managed:
+    dependencies:
+      '@midnight-ntwrk/mn-passport-core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/connect:
+    dependencies:
+      '@midnight-ntwrk/mn-passport-contract':
+        specifier: workspace:*
+        version: link:../contract
+      '@midnight-ntwrk/mn-passport-protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/contract: {}
+
+  packages/core:
+    dependencies:
+      '@midnight-ntwrk/mn-passport-contract':
+        specifier: workspace:*
+        version: link:../contract
+      '@midnight-ntwrk/mn-passport-protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/protocol: {}
+
 packages:
 
   '@types/node@22.20.1':

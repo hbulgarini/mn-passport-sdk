@@ -56,7 +56,11 @@ T1 and T2 are greenfield.
 
   Each skeleton: a manifest carrying **only the dependency edges architecture
   §4.4 permits** (D-2), a `tsconfig.json`, an empty typed entrypoint
-  (`export {}`), and a placeholder test. The exact `adapter-*` set is OQ-4.
+  (`export {}`). Shared root tests (dependency rules, wiring smoke) stand in
+  for per-package placeholder tests until the packages carry logic; T2 also
+  lands the `.npmrc` supply-chain posture (`save-exact`, `ignore-scripts`),
+  closing two register entries on their recorded T2 trigger. The exact
+  `adapter-*` set is OQ-4 (resolved: three adapters).
 - **The dependency-boundary lint** — a lint rule that forbids
   `connect → core` imports (brief; architecture §4.4), plus the manifest-level
   edge check behind it.
@@ -257,7 +261,7 @@ not the final gated plan. Estimates exclude the lockfile and generated code
 | # | Tranche (brief) | Contents | Estimate |
 |---|---|---|---|
 | T1 | **Monorepo + build/test** | root manifest + workspaces, `tsconfig.base.json`, formatter config, `.nvmrc`/`engines`, root scripts, lockfile | ~10 files, ≤ 200 net lines |
-| T2 | **Package skeletons + the dependency-boundary lint** | seven package skeletons (manifest, tsconfig, `export {}` entrypoint, placeholder test); the lint rule + manifest-level test | ~23 files, ≤ 380 net lines |
+| T2 | **Package skeletons + the dependency-boundary lint** | seven package skeletons (manifest, tsconfig, `export {}` entrypoint); shared root tests (dependency rules + wiring smoke); the lint rule; the `.npmrc` posture | ~23 files, ≤ 380 net lines |
 | T3 | **CI activation** (reduced — the plugin, `STATE.md`, and gitignore landed on `main` in `c7c9b9b`, D-8) | extend `pr-checks.yml`: run build + test in the gate, add the gitignore backstop (`.mn-passport-skills/` never tracked), drive Node from `.nvmrc` (`node-version-file`) | ~2 files, ≤ 100 net lines |
 
 Each sits under the 400-line soft budget (the plugin rename that once
@@ -281,6 +285,6 @@ purely additive).
 | OQ-1 | ~~GitHub issue~~ **Resolved 2026/07/29:** [midnightntwrk/passport#50](https://github.com/midnightntwrk/passport/issues/50), recorded here and in the brief. | Closed |
 | OQ-2 | ~~Workspace tool~~ **Resolved 2026/07/29 at T1: pnpm (D-9)** — decided as npm at first, revised to pnpm by human decision within the same tranche. The yarn artefacts are dropped from `.gitignore`, so gate scripts, lockfile, and docs tell one story. | Closed (D-9) |
 | OQ-3 | ~~Advisory diff-size threshold~~ **Resolved 2026/07/29 at T1: the 400/600 numbers stand.** T1's config-heavy diff landed well under the soft line (lockfile excluded by the gate), so scaffolding needs no special threshold; revisit only if an M0 tranche actually trips 400. | Closed |
-| OQ-4 | **Exact `adapter-*` skeleton set.** The brief says "the `adapter-*` dirs"; beta-scope §3 names two (`adapter-signer-managed`, `adapter-prover-remote`); roadmap §3 also lists `adapter-browser` for M0–M1. This spec scaffolds the two; confirm whether `adapter-browser` joins now or with its first real code in M1. | Confirm at plan phase; beta-scope/roadmap doc-sync if the lists should agree |
+| OQ-4 | ~~Exact `adapter-*` skeleton set~~ **Resolved 2026/07/29 at T2: three adapters** — `adapter-signer-managed`, `adapter-signer-local` (ADR 0001), and `adapter-prover-remote` (beta-scope §3). `adapter-browser` joins with its first real code in M1; roadmap §3 updated accordingly. | Closed |
 | OQ-5 | **Linter choice for the boundary rule.** The brief mandates a lint rule; the docs name no linter. Pick one weighing dependency count against the 7-day cooldown; record it. | Decision at T2; note in spec |
 | OQ-6 | **The settlement adapter is unnamed.** Roadmap §3 lists "`adapter-*` settlement seam" (M1) without a package name; FS-0.6 defines the Settlement seam interface, so the docs must name the adapter before its M1 spec. | `mn-passport-skills:doc-sync` before the M1 spec |
