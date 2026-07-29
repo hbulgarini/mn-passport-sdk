@@ -2,13 +2,13 @@
 // externally-owned ACC artefact (architecture §4.6, §8 decision 2; spec
 // §4.1/D-8). Typed callers land in T2; loader integrity in T3.
 export {
-  ACC_REGISTRY,
   type AccBinding,
   type AccRegistry,
   type CircuitHashes,
   type CircuitPin,
 } from './manifest.generated.js';
 export {
+  ACC_REGISTRY,
   BINDING_VERSION,
   SUPPORTED_BINDINGS,
   UnsupportedBindingError,

@@ -3,10 +3,12 @@
 // is kernel-owned account metadata (core, via the Storage seam) — this
 // package only defines, resolves, and detects versions. Browser-safe by
 // construction: no platform imports (the boundary lint enforces it).
-import { ACC_REGISTRY, type AccBinding, type AccRegistry } from './manifest.generated.js';
+import {
+  ACC_REGISTRY as GENERATED_REGISTRY,
+  type AccBinding,
+  type AccRegistry,
+} from './manifest.generated.js';
 
-// The registry is the integrity anchor T3's loader verifies against, so it
-// must not be mutable at runtime — `readonly` alone is compile-time only.
 function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === 'object') {
     for (const child of Object.values(value)) deepFreeze(child);
@@ -14,7 +16,18 @@ function deepFreeze<T>(value: T): T {
   }
   return value;
 }
-deepFreeze(ACC_REGISTRY);
+
+/**
+ * The supported-versions registry, deep-frozen at initialisation. The
+ * freeze is not incidental: this data is the integrity anchor the loader
+ * (T3) verifies artefact bytes against, so it must be immutable before any
+ * consumer can hold a reference — `readonly` types are compile-time only.
+ * The generated module is data-only by design (no logic in generated
+ * files), so applying the invariant is this module's job, and the package
+ * exposes the registry solely through here (the exports map publishes only
+ * the package entrypoint), so no unfrozen reference can escape.
+ */
+export const ACC_REGISTRY: AccRegistry = deepFreeze(GENERATED_REGISTRY);
 
 /** The version new deploys use (the registry's `current` pointer). */
 export const BINDING_VERSION: string = ACC_REGISTRY.current;
