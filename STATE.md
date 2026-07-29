@@ -1,7 +1,7 @@
 # STATE — Midnight Passport SDK
 
 > The committed record of SDK development, maintained by
-> `mn-skills:spec-driver` per [`docs/development-workflow.md`](./docs/development-workflow.md) §3.
+> `mn-passport-skills:spec-driver` per [`docs/development-workflow.md`](./docs/development-workflow.md) §3.
 > Every entry carries its GitHub issue
 > ([midnightntwrk/passport](https://github.com/midnightntwrk/passport/issues)).
 > Last updated: 2026/07/27.

@@ -1,6 +1,6 @@
 # Midnight Passport SDK — Beta (v1) scope
 
-> **Status:** draft · 2026/07/24
+> **Status:** draft · 2026/07/29
 > **Reduces:** [`sdk-requirements.md`](./sdk-requirements.md) and
 > [`architecture.md`](./architecture.md) to the smallest slice that ships a
 > usable beta. Every in-scope item points to its full-scope section; every
@@ -28,14 +28,22 @@ claim the name (`alice.passport.night`). Covers onboarding (§3.1), the ACC
 transactions are **sponsored by the provider** (see item 3), so a zero-DUST
 user can onboard with no faucet or separate fee mechanism.
 
-**(2) Managed path only** — the account is set up and used through the
-**wallet-infrastructure provider** (the managed custody path, §2.1 / §2.6).
-The decentralised, self-custody path (in-circuit Jubjub device keys, §2.1
-decentralised / §2.3) is **out of beta**. Passkeys are **always** used to
+**(2) Managed path first, with a self-custody fallback** — the account is set
+up and used through the **wallet-infrastructure provider** (the managed
+custody path, §2.1 / §2.6). Because the provider's signer integration is an
+external gate that may not be ready in time, beta **also builds
+`adapter-signer-local`** — the self-custody signer (in-circuit Jubjub device
+keys, §2.1 decentralised / §2.3) — as a **contingency fallback** behind the
+same signer seam: same flow, same ACC, one-line swap (architecture §4.6,
+example 1). The managed path remains the primary beta experience; the
+fallback is promoted only if the provider gate slips
+([ADR 0001](./adr/0001-beta-includes-local-signer-fallback.md)). Progressive
+decentralisation of the *default* path stays post-beta. Passkeys are
+**always** used to
 confirm transactions (§2.2): the provider's own login is passkey-based, and
-that passkey is the presence gate on every managed-path action. What is
-deferred is the decentralised *use* of the passkey (deriving an in-circuit
-device key), not the passkey itself.
+that passkey is the presence gate on every managed-path action. The
+decentralised *use* of the passkey (deriving an in-circuit device key) lives
+only in the fallback adapter; as the default path it stays deferred.
 
 **(3) Proving via the provider's remote proof server only** — all proofs
 route to the provider's remote prover (§2.5 **path 2a**, provider-routed).
@@ -76,10 +84,13 @@ Live in beta:
 - `mn-passport-connect` + `mn-passport-protocol` — the dApp side, sign-in and
   profile read only.
 - `adapter-signer-managed` — the provider-backed custody path.
+- `adapter-signer-local` — the self-custody signer, built as the
+  **contingency fallback** should the provider integration slip (§2 item 2,
+  [ADR 0001](./adr/0001-beta-includes-local-signer-fallback.md)).
 - `adapter-prover-remote` — pinned to the provider's remote proof server
   (path 2a).
 
-Not built for beta: `adapter-signer-local`, `adapter-prover-wasm`,
+Not built for beta: `adapter-prover-wasm`,
 `adapter-agent-ows`, `adapter-wallet-connect`, `adapter-fee-capacity-exchange`,
 and the witness-provisioning half of the connector.
 
@@ -99,7 +110,7 @@ flowchart TB
 
 | Deferred | Comes from |
 |---|---|
-| Decentralised / self-custody path (in-circuit Jubjub) | §2.1 decentralised, §2.3 |
+| Decentralised / self-custody as the **default** path (the fallback adapter is in beta, §2 item 2) | §2.1 decentralised, §2.3 |
 | In-tab WASM proving; direct TEE prover | §2.5 paths 1 and 2b |
 | Witness provisioning to dApps | #58 · §3.6 / §3.9 |
 | Scoped grants (issue / spend) beyond sign-in | §3.2 · C10–C12 |
@@ -126,11 +137,15 @@ Beta leans on the **provider** for anything managed it happens to offer
   demo-grade). Acceptable for beta? If a beta user needs the same account on
   a second device, the portable §2.3 binding is needed sooner rather than
   later.
+- **Fallback activation checkpoint.** `adapter-signer-local` is built as the
+  contingency (§2 item 2, ADR 0001); define the date/milestone at which the
+  provider's signer readiness is assessed and the fallback is either promoted
+  to the beta onboarding path or left dark.
 
 ## 6. Delivery
 
 Beta is anchored to a single GitHub issue and planned into small,
-reviewable PRs via `mn-skills-spec-driver` (development-workflow §3). Rough
+reviewable PRs via `mn-passport-skills-spec-driver` (development-workflow §3). Rough
 tranches:
 
 1. Managed onboarding — ACC deploy + name claim, proofs via the provider's

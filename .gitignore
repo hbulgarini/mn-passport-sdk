@@ -22,9 +22,9 @@ coverage/
 .env.*
 !.env.example
 
-# mn-skills working artefacts (gitignored per docs/development-workflow.md)
+# mn-passport-skills working artefacts (gitignored per docs/development-workflow.md)
 # security residual-risk register + verify/provisional register
-.mn-skills/
+.mn-passport-skills/
 
 # Midnight local dev artefacts
 contracts/managed/

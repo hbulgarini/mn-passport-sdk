@@ -8,6 +8,6 @@
     }
   },
   "enabledPlugins": {
-    "mn-skills@mn-passport-sdk": true
+    "mn-passport-skills@mn-passport-sdk": true
   }
 }

@@ -33,7 +33,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Check net changed lines against the budget
-        run: bash mn-skills/scripts/check-diff-size.sh "origin/${{ github.base_ref }}" --ci
+        run: bash mn-passport-skills/scripts/check-diff-size.sh "origin/${{ github.base_ref }}" --ci
 
   dep-cooldown:
     name: 7-day dependency cooldown
@@ -48,7 +48,7 @@ jobs:
       - name: Reject package versions younger than 7 days
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
-        run: node mn-skills/scripts/check-dep-cooldown.mjs "origin/${{ github.base_ref }}"
+        run: node mn-passport-skills/scripts/check-dep-cooldown.mjs "origin/${{ github.base_ref }}"
 
   format-lint:
     name: Format + lint
