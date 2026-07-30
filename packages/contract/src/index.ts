@@ -26,3 +26,14 @@ export {
   type AccWitnesses,
 } from './acc-module.js';
 export { buildDeployArgs, type AccDeployArgs, type AccDeployInputs } from './deploy.js';
+export {
+  ACC_MODULE_FILE,
+  UnknownCircuitError,
+  ZkArtifactIntegrityError,
+  loadArtefact,
+  type AbortSignalLike,
+  type ArtefactPart,
+  type ArtefactSource,
+  type LoadArtefactOptions,
+  type LoadedAccArtefact,
+} from './loader.js';
