@@ -19,7 +19,10 @@ export {
 export {
   AccModuleShapeError,
   bindAccModule,
+  type AccContractInstance,
   type AccContractModule,
   type AccPureCircuits,
+  type AccWitnessContext,
+  type AccWitnesses,
 } from './acc-module.js';
 export { buildDeployArgs, type AccDeployArgs, type AccDeployInputs } from './deploy.js';

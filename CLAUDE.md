@@ -81,6 +81,8 @@ compatibility matrix) and `mn-passport-skills:devenv`.
 ## Conventions
 
 - British English, Oxford comma; dates `YYYY/MM/DD`.
+- **Type as much as you can:** no `any`; `unknown` only as a documented last
+  resort naming why and who owns the type (code-style skill has the detail).
 - Packages `@midnight-ntwrk/mn-passport-*`; dev skills `mn-passport-skills:*`.
 - Midnight-branded product (not IOG-branded) for any UI.
 - **Committed docs stay vendor-neutral:** "the provider" and "the proving &

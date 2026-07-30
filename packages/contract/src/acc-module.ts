@@ -19,13 +19,52 @@ export interface AccPureCircuits {
 }
 
 /**
- * The structural surface of a generated ACC contract module. `W` is the
- * witness object the kernel hands to the constructor (typed by the kernel
- * when it consumes this, FS-0.3).
+ * The witness-callback context, mirrored minimally: the generated module's
+ * `WitnessContext` carries more (ledger view, contract address), and a
+ * kernel implementation written against this narrower shape remains
+ * assignable to it. `PS` is the private-state type the kernel defines
+ * (FS-0.3) — unknown here because its owner does not exist yet.
  */
-export interface AccContractModule<W = unknown> {
+export interface AccWitnessContext<PS = unknown> {
+  readonly privateState: PS;
+}
+
+/** The three ACC witnesses the kernel implements and hands to the constructor. */
+export interface AccWitnesses<PS = unknown> {
+  device_secret(context: AccWitnessContext<PS>): [PS, Uint8Array];
+  grant_secret(context: AccWitnessContext<PS>): [PS, Uint8Array];
+  recovery_secret(context: AccWitnessContext<PS>): [PS, Uint8Array];
+}
+
+/** A constructed contract instance — the deploy-relevant surface. */
+export interface AccContractInstance {
+  /**
+   * The Compact constructor. `context` and the return value are
+   * runtime-owned types (`ConstructorContext`/`ConstructorResult` from
+   * `@midnight-ntwrk/compact-runtime`) that this package cannot import
+   * (D-9: dependency-free, platform-neutral); FS-1.1's call construction
+   * types them at the consumer, where the runtime is present.
+   */
+  initialState(
+    context: unknown,
+    initialDeviceCommitment: bigint,
+    recoveryCommitment: bigint,
+  ): unknown;
+}
+
+/**
+ * The structural surface of a generated ACC contract module. `PS` is the
+ * kernel-defined private-state type (FS-0.3).
+ */
+export interface AccContractModule<PS = unknown> {
   readonly pureCircuits: AccPureCircuits;
-  readonly Contract: new (witnesses: W) => unknown;
+  readonly Contract: new (witnesses: AccWitnesses<PS>) => AccContractInstance;
+  /**
+   * Projects raw contract state into the typed ledger view. Both sides are
+   * runtime-owned (`StateValue` in, the generated `Ledger` out); the
+   * structural ledger mirror lands with its first consumer (FS-1.1 reads
+   * `round`/`auth_nonce`; M2 reads names) rather than speculatively here.
+   */
   readonly ledger: (state: unknown) => unknown;
 }
 
@@ -57,7 +96,7 @@ const REQUIRED_PURE_CIRCUITS = ['derive_device_commitment', 'derive_recovery_com
  * unverified source; byte integrity against the committed hashes is the
  * T3 loader's job.
  */
-export function bindAccModule(module: unknown): AccContractModule {
+export function bindAccModule<PS = unknown>(module: unknown): AccContractModule<PS> {
   if (module === null || typeof module !== 'object') {
     throw new AccModuleShapeError('not an object');
   }
@@ -81,7 +120,7 @@ export function bindAccModule(module: unknown): AccContractModule {
   }
   return Object.freeze({
     pureCircuits: Object.freeze(pickedPure) as unknown as AccPureCircuits,
-    Contract: contract as new (witnesses: unknown) => unknown,
+    Contract: contract as new (witnesses: AccWitnesses<PS>) => AccContractInstance,
     ledger: ledger as (state: unknown) => unknown,
   });
 }
