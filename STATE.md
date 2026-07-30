@@ -4,7 +4,7 @@
 > `mn-passport-skills:spec-driver` per [`docs/development-workflow.md`](./docs/development-workflow.md) §3.
 > Every entry carries its GitHub issue
 > ([midnightntwrk/passport](https://github.com/midnightntwrk/passport/issues)).
-> Last updated: 2026/07/29.
+> Last updated: 2026/07/30.
 
 ## Done
 
@@ -56,9 +56,9 @@
   kernel-owned metadata (spec §4.1); the upgrade path stays deferred
   (roadmap §8).
 
-## In progress
-
-- **FS-0.2 · T2 — typed deploy caller** (#50) — `buildDeployArgs` shapes
+- **FS-0.2 · T2 — typed deploy caller** (#50 ·
+  [PR #8](https://github.com/hbulgarini/mn-passport-sdk/pull/8), merged
+  2026/07/30) — `buildDeployArgs` shapes
   the ACC constructor call (ordered commitments, version-gated by
   `assertBindingCompatible`, the §8.2 connect-time guard);
   `bindAccModule` gives structural typing over the runtime-loaded
@@ -68,15 +68,26 @@
   added as a root devDependency (0.16.0, exactly the artefact's recorded
   runtime version, past cooldown; first entry in
   `docs/compatibility.md`). The spec's "pure-commitment re-exports"
-  became this structural mirror + binder (spec D-9, closing OQ-5).
-  Branch `feat/fs-0.2-t2-deploy`.
+  became this structural mirror + binder (spec D-9, closing OQ-5). Review
+  hardening rode the PR: fully typed witnesses/instance surface, PS
+  inferred at the construction site, and the maximise-typing rule
+  recorded (code-style skill + CLAUDE.md).
+
+## In progress
+
+- **FS-0.2 · T3 — loader integrity** (#50) — `loadArtefact(source)`:
+  platform-neutral (byte source injected — fetch in browsers, fs in
+  tests; Web Crypto hashing), verifying every fetched byte against the
+  committed registry hashes before returning; `ZkArtifactIntegrityError`
+  and `UnknownCircuitError` join the taxonomy with stable codes; prover
+  keys load only on explicit request (dev-local proving, FS-0.5). The
+  host-runtime execution gap is documented at the loader and stays a
+  register item (revisit at `adapter-browser`). Finishes FS-0.2's
+  plannable scope — claim-name stays blocked on the C2 gate. Branch
+  `feat/fs-0.2-t3-loader`.
 
 ## Backlog
 
-- **FS-0.2 · T3 — loader integrity** (#50) — `loadArtefact` verifying the
-  committed hashes (ADR 0004); `ZkArtifactIntegrityError`; hardening the
-  binder's trust story (property-picking is done at T2; byte integrity
-  lands here). Waiting on T2.
 - **FS-0.2 · claim-name caller** (#50) — **blocked**: the prototype has no
   name circuit and the C2 name-service artefact does not exist yet (spec
   OQ-4, human decision 2026/07/29). Resumes when the contract team
