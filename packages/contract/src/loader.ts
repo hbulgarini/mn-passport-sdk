@@ -162,9 +162,11 @@ const sha256Hex = async (bytes: Uint8Array): Promise<string> => {
  * Also throws {@link import('./registry.js').UnsupportedBindingError} for
  * versions outside the supported set (before anything is fetched),
  * {@link UnknownCircuitError} for circuits the binding cannot serve, and a
- * plain `TypeError` when the Web Crypto global is unavailable (a
- * non-secure browser context — HTTPS-local is the documented baseline,
- * FS-0.8). By default it loads the generated module plus each requested
+ * plain `TypeError` when the Web Crypto global is unavailable — a
+ * non-secure context only: every mobile engine implements it, installed
+ * PWAs are secure contexts by construction, and passkeys share the same
+ * requirement, so the realistic trigger is dev-on-device over plain-HTTP
+ * LAN (use HTTPS-local or port-forward to localhost — FS-0.8). By default it loads the generated module plus each requested
  * circuit's ZKIR (text and binary) and verifier key — prover keys are
  * fetched remotely by `keyLocation` in the proving flow and can be
  * requested here explicitly (dev-local proving, FS-0.5). Files are fetched
