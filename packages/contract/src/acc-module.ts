@@ -52,13 +52,15 @@ export interface AccContractInstance {
   ): unknown;
 }
 
-/**
- * The structural surface of a generated ACC contract module. `PS` is the
- * kernel-defined private-state type (FS-0.3).
- */
-export interface AccContractModule<PS = unknown> {
+/** The structural surface of a generated ACC contract module. */
+export interface AccContractModule {
   readonly pureCircuits: AccPureCircuits;
-  readonly Contract: new (witnesses: AccWitnesses<PS>) => AccContractInstance;
+  /**
+   * The private-state type `PS` is inferred from the witnesses the caller
+   * constructs with — the kernel defines both (FS-0.3), so the type check
+   * happens at the construction site, not asserted at bind time.
+   */
+  readonly Contract: new <PS>(witnesses: AccWitnesses<PS>) => AccContractInstance;
   /**
    * Projects raw contract state into the typed ledger view. Both sides are
    * runtime-owned (`StateValue` in, the generated `Ledger` out); the
@@ -96,7 +98,7 @@ const REQUIRED_PURE_CIRCUITS = ['derive_device_commitment', 'derive_recovery_com
  * unverified source; byte integrity against the committed hashes is the
  * T3 loader's job.
  */
-export function bindAccModule<PS = unknown>(module: unknown): AccContractModule<PS> {
+export function bindAccModule(module: unknown): AccContractModule {
   if (module === null || typeof module !== 'object') {
     throw new AccModuleShapeError('not an object');
   }
@@ -120,7 +122,7 @@ export function bindAccModule<PS = unknown>(module: unknown): AccContractModule<
   }
   return Object.freeze({
     pureCircuits: Object.freeze(pickedPure) as unknown as AccPureCircuits,
-    Contract: contract as new (witnesses: AccWitnesses<PS>) => AccContractInstance,
+    Contract: contract as AccContractModule['Contract'],
     ledger: ledger as (state: unknown) => unknown,
   });
 }
