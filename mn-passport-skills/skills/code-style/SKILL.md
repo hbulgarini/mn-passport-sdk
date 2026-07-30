@@ -31,6 +31,15 @@ and never nitpick what a tool enforces.
 - **No `any`** — the prototype's `any`-typed provider boundary is an
   explicitly named failure (arch §7). Strict mode; exported API surfaces
   fully and explicitly typed.
+- **Type as much as you can** (human rule, 2026/07/30 — raised on PR #8):
+  `unknown` is a last resort, not a default. Before reaching for it, mirror
+  the shape structurally (as `AccWitnesses`/`AccPureCircuits` do for the
+  generated module), or take a generic parameter so the consumer can supply
+  the type (`bindAccModule<PS>`). Every `unknown` that survives must carry a
+  doc comment naming **why** it cannot be typed here and **who owns** the
+  type (e.g. a runtime-owned type the package must not import, or a
+  consumer-defined type whose owner is a later spec). An undocumented
+  `unknown` on an exported surface is a review finding.
 - **No module-global singletons** — instance-scoped, disposable objects
   (arch §4.3); multi-account must be possible.
 - **Error taxonomy consistency** — typed error classes with stable codes,

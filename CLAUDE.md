@@ -81,10 +81,19 @@ compatibility matrix) and `mn-passport-skills:devenv`.
 ## Conventions
 
 - British English, Oxford comma; dates `YYYY/MM/DD`.
+- **Type as much as you can:** no `any`; `unknown` only as a documented last
+  resort naming why and who owns the type (code-style skill has the detail).
 - Packages `@midnight-ntwrk/mn-passport-*`; dev skills `mn-passport-skills:*`.
 - Midnight-branded product (not IOG-branded) for any UI.
 - **Committed docs stay vendor-neutral:** "the provider" and "the proving &
   settlement service", not vendor names.
+- **PR links are always pre-filled.** Whenever a GitHub PR-creation link is
+  produced, use the compare URL with URL-encoded `title` and `body` query
+  parameters so the form arrives ready to submit (the human still clicks
+  Create — the outward action stays theirs). Also include the description
+  as a plain copy-paste block as fallback (long bodies can exceed URL
+  limits). The body must carry the `Refs`/`Closes` issue line the CI
+  description gate checks.
 
 ## What not to do
 

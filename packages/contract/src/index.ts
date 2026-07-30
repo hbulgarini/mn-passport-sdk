@@ -12,6 +12,17 @@ export {
   BINDING_VERSION,
   SUPPORTED_BINDINGS,
   UnsupportedBindingError,
+  assertBindingCompatible,
   detectDeployedVersion,
   resolveBinding,
 } from './registry.js';
+export {
+  AccModuleShapeError,
+  bindAccModule,
+  type AccContractInstance,
+  type AccContractModule,
+  type AccPureCircuits,
+  type AccWitnessContext,
+  type AccWitnesses,
+} from './acc-module.js';
+export { buildDeployArgs, type AccDeployArgs, type AccDeployInputs } from './deploy.js';

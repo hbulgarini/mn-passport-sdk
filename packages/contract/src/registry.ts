@@ -105,3 +105,17 @@ export function detectDeployedVersion(
   if (matches.length === 0) return null;
   return matches.includes(registry.current) ? registry.current : (matches[0] ?? null);
 }
+
+/**
+ * The connect-time compatibility guard (architecture §8 decision 2): the
+ * SDK serves an account only if its binding version is in the supported
+ * set — otherwise it throws {@link UnsupportedBindingError}. The same
+ * check as {@link resolveBinding}, kept as a named guard so call sites
+ * read as the gate they are.
+ */
+export function assertBindingCompatible(
+  version: string,
+  registry: AccRegistry = ACC_REGISTRY,
+): void {
+  resolveBinding(version, registry);
+}
