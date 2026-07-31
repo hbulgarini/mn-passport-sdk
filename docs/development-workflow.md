@@ -1,6 +1,6 @@
 # Development workflow — the `mn-passport-skills` family
 
-> **Status:** draft · 2026/07/29
+> **Status:** draft · 2026/07/31
 > **Companion to:** [`sdk-requirements.md`](./sdk-requirements.md) (the *what/why*)
 > and [`architecture.md`](./architecture.md) (the *how*). This document is the
 > *how we build it* — the Claude-harness skills that drive SDK development and
@@ -226,6 +226,31 @@ docs are the source; a feature spec is what gets driven).
 
 Running alongside, on their own cadence: `mn-passport-skills-deps` (drift + cooldown +
 matrix) and `mn-passport-skills-devenv`.
+
+### The PR feedback loop (`gh`)
+
+With an authenticated GitHub CLI (`gh auth login`), the review conversation
+moves onto the PR itself — recommended, because it keeps feedback anchored
+to the exact line it concerns and leaves a public record of the reasoning:
+
+1. **Claude opens the PR with `gh pr create`** (title and full description
+   in place) once a tranche passes its lenses — on the human's explicit go,
+   as always.
+2. **The developer reviews on GitHub**, leaving feedback as PR review
+   comments (inline on a line, or on the PR as a whole) — questions,
+   objections, and change requests alike.
+3. **The developer asks Claude to pick them up** ("check the comments on
+   PR #N"). Claude reads the threads (`gh api` / the REST API), works out a
+   solution, and — **before committing anything — presents the proposed fix
+   and its reasoning, and waits for the human to confirm they agree.**
+4. On confirmation, Claude commits (staging explicit paths only), pushes to
+   the PR branch, and **replies on the review thread** so the resolution is
+   recorded where the question was asked.
+
+The outward-action rule is unchanged: pushes, PR creation, and inline
+replies happen on the human's instruction; merging stays human. Without
+`gh`, the read-only fallback is the public REST API plus pre-filled compare
+URLs (the `pr-open` convention).
 
 ### Diagram — the orchestration loop
 
